@@ -1,0 +1,9 @@
+# Default owner — every PR requires their review.
+*                                       @Rakesh2907-AI
+
+# Critical paths get an extra review gate.
+/shared/db/migrations/                  @Rakesh2907-AI
+/shared/db/client.js                    @Rakesh2907-AI
+/infrastructure/terraform/              @Rakesh2907-AI
+/infrastructure/helm/                   @Rakesh2907-AI
+/.github/workflows/                     @Rakesh2907-AI
