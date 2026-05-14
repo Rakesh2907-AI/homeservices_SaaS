@@ -1,0 +1,27 @@
+# Per-tenant ArgoCD Application — one per tenant.
+# To target a single tenant for deployment, edit only this file's `targetRevision`
+# or its referenced values file. ArgoCD syncs only that namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tenant-${TENANT_SLUG}
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/yourorg/homeservices-saas
+    targetRevision: main
+    path: infrastructure/helm/homeservices
+    helm:
+      valueFiles:
+        - ../values/values-default.yaml
+        - ../values/values-${TENANT_SLUG}.yaml   # tenant-specific override
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tenant-${TENANT_SLUG}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false   # Namespace created by Terraform first

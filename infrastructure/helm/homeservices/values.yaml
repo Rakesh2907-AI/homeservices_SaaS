@@ -1,0 +1,71 @@
+# Default values — overridden by values-<tenant>.yaml for granular deploys.
+tenant:
+  id: ""
+  slug: "shared"
+  planTier: basic
+
+image:
+  registry: ghcr.io/yourorg
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+# Service-level config. Each service gets its own Deployment.
+services:
+  apiGateway:
+    enabled: true
+    replicaCount: 2
+    port: 3000
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+  tenantService:
+    enabled: true
+    replicaCount: 2
+    port: 3001
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+  authService:
+    enabled: true
+    replicaCount: 2
+    port: 3002
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+  bookingService:
+    enabled: true
+    replicaCount: 3
+    port: 3003
+    resources:
+      requests: { cpu: 200m, memory: 256Mi }
+      limits:   { cpu: 1000m, memory: 1Gi }
+
+# Externalized infra — connection strings come from secrets created by Terraform.
+database:
+  secretName: hs-db-credentials
+  poolerHost: pgbouncer.shared-infra.svc.cluster.local
+  poolerPort: 5432
+
+redis:
+  host: redis-master.shared-infra.svc.cluster.local
+  port: 6379
+
+# Feature flag overrides — used for per-tenant releases.
+featureFlags:
+  enabled: true
+  unleashUrl: http://unleash.shared-infra.svc.cluster.local:4242/api
+
+# HPA — scales pods based on CPU. Each service is independently scaled.
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""
+  tls:
+    enabled: true
+    secretName: ""

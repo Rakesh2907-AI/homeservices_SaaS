@@ -1,0 +1,28 @@
+name: Deploy to single tenant
+
+on:
+  workflow_dispatch:
+    inputs:
+      tenant_slug:
+        description: "Tenant slug (e.g. acme)"
+        required: true
+      image_tag:
+        description: "Image tag to deploy"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update tenant values file
+        run: |
+          sed -i "s/^  tag:.*/  tag: \"${{ inputs.image_tag }}\"/" \
+            infrastructure/helm/values/values-${{ inputs.tenant_slug }}.yaml
+      - name: Commit and push (ArgoCD detects + syncs)
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add infrastructure/helm/values/values-${{ inputs.tenant_slug }}.yaml
+          git commit -m "deploy: ${{ inputs.tenant_slug }} -> ${{ inputs.image_tag }}"
+          git push

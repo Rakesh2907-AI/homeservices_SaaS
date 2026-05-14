@@ -1,0 +1,8 @@
+apiVersion: v2
+name: homeservices
+description: Home Services SaaS platform — multi-tenant deployment
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Platform Team

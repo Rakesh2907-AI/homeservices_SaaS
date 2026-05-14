@@ -1,0 +1,15 @@
+# Default values for any new tenant onboarded onto the standard fleet.
+# Tenants on "basic" plan use these unless promoted.
+image:
+  tag: "1.0.3"   # the fleet-wide stable tag
+
+services:
+  apiGateway: { replicaCount: 2 }
+  bookingService: { replicaCount: 2 }
+
+autoscaling:
+  minReplicas: 2
+  maxReplicas: 8
+
+ingress:
+  enabled: true

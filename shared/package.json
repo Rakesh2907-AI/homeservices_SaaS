@@ -1,0 +1,22 @@
+{
+  "name": "@hs/shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "migrate:latest": "knex --knexfile db/knexfile.js migrate:latest",
+    "migrate:rollback": "knex --knexfile db/knexfile.js migrate:rollback",
+    "migrate:make": "knex --knexfile db/knexfile.js migrate:make",
+    "seed": "knex --knexfile db/knexfile.js seed:run"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "ioredis": "^5.4.1",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
+    "pg": "^8.13.0",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0",
+    "dotenv": "^16.4.5"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "homeservices-saas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-tenant Home Services SaaS Platform",
+  "workspaces": [
+    "services/*",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "docker-compose up -d postgres redis && npm run migrate && npm run dev:all",
+    "dev:all": "concurrently \"npm:dev:*(!all)\"",
+    "dev:tenant": "npm --workspace services/tenant-service run dev",
+    "dev:auth": "npm --workspace services/auth-service run dev",
+    "dev:booking": "npm --workspace services/booking-service run dev",
+    "migrate": "npm --workspace shared run migrate:latest",
+    "migrate:rollback": "npm --workspace shared run migrate:rollback",
+    "seed": "npm --workspace shared run seed",
+    "lint": "eslint . --ext .js",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "eslint": "^9.15.0",
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
