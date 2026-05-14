@@ -12,7 +12,7 @@ const TENANT_SVC = `http://localhost:${process.env.TENANT_SERVICE_PORT || 3001}`
 const AUTH_SVC = `http://localhost:${process.env.AUTH_SERVICE_PORT || 3002}`;
 const BOOKING_SVC = `http://localhost:${process.env.BOOKING_SERVICE_PORT || 3003}`;
 
-const app = Fastify({ logger, trustProxy: true });
+const app = Fastify({ loggerInstance: logger, trustProxy: true });
 
 async function start() {
   await app.register(helmet);

@@ -8,7 +8,7 @@ const { logger } = require('@hs/shared');
 
 const authRoutes = require('./routes/auth');
 
-const app = Fastify({ logger });
+const app = Fastify({ loggerInstance: logger });
 
 async function start() {
   await app.register(helmet);

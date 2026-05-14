@@ -11,7 +11,7 @@ const customersRoutes = require('./routes/customers');
 const servicesRoutes = require('./routes/services');
 const categoriesRoutes = require('./routes/categories');
 
-const app = Fastify({ logger });
+const app = Fastify({ loggerInstance: logger });
 
 async function start() {
   await app.register(helmet);

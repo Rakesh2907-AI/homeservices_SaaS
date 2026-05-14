@@ -10,7 +10,7 @@ const tenantsRoutes = require('./routes/tenants');
 const themesRoutes = require('./routes/themes');
 const healthRoutes = require('./routes/health');
 
-const app = Fastify({ logger });
+const app = Fastify({ loggerInstance: logger });
 
 async function start() {
   await app.register(helmet);

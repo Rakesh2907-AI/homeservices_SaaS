@@ -74,6 +74,23 @@ module.exports = async function (app) {
 
   // ===== Public: resolve tenant by host (used by frontend bootstrap) =====
   app.get('/resolve', async (req, reply) => {
+    // Behind the gateway, x-tenant-id is already injected after host resolution.
+    if (req.headers['x-tenant-id']) {
+      const tenantId = req.headers['x-tenant-id'];
+      return cache.remember(cache.key(tenantId, 'public'), 300, async () => {
+        const { rows } = await db.withSuperAdmin((c) =>
+          c.query(
+            `SELECT tenant_id, business_name, subdomain, custom_domain, plan_tier,
+                    logo_url, theme_config
+             FROM tenants WHERE tenant_id=$1 AND is_active=true`,
+            [tenantId]
+          )
+        );
+        if (!rows[0]) { reply.code(404); return null; }
+        return rows[0];
+      });
+    }
+
     const host = (req.query.host || req.headers.host || '').split(':')[0];
     if (!host) {
       reply.code(400);
