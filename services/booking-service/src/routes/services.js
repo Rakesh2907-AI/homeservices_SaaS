@@ -30,6 +30,44 @@ module.exports = async function (app) {
     });
   });
 
+  // Bulk-create services (with optional pricing rules per service).
+  app.post('/bulk', async (req, reply) => {
+    if (req.user.role !== 'business_admin' && req.user.role !== 'super_admin') {
+      reply.code(403); return { error: 'business_admin role required' };
+    }
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+    if (!items.length) { reply.code(400); return { error: 'items[] required' }; }
+
+    const out = await db.withTenant(req.tenantId, async (c) => {
+      const created = [];
+      for (const item of items) {
+        const { rows } = await c.query(
+          `INSERT INTO services (tenant_id, category_id, title, description, base_price, duration_mins, metadata)
+           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+          [req.tenantId, item.category_id, item.title, item.description || null,
+           item.base_price ?? null, item.duration_mins ?? null, JSON.stringify(item.metadata || {})]
+        );
+        const svc = rows[0];
+
+        if (Array.isArray(item.pricing_rules)) {
+          for (const r of item.pricing_rules) {
+            await c.query(
+              `INSERT INTO pricing_structures (tenant_id, service_id, rule_type, rate, config)
+               VALUES ($1,$2,$3,$4,$5)`,
+              [req.tenantId, svc.id, r.rule_type, r.rate, JSON.stringify(r.config || {})]
+            );
+          }
+        }
+        created.push(svc);
+      }
+      return created;
+    });
+
+    await cache.invalidateTenant(req.tenantId);
+    reply.code(201);
+    return { data: out };
+  });
+
   app.post('/', async (req, reply) => {
     if (req.user.role !== 'business_admin' && req.user.role !== 'super_admin') {
       reply.code(403); return { error: 'business_admin role required' };

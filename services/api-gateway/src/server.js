@@ -16,7 +16,12 @@ const app = Fastify({ loggerInstance: logger, trustProxy: true });
 
 async function start() {
   await app.register(helmet);
-  await app.register(cors, { origin: true, credentials: true });
+  await app.register(cors, {
+    origin: true,
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-slug', 'x-tenant-id'],
+    exposedHeaders: ['x-tenant-id'],
+  });
 
   // Tenant-aware rate limiting: bucket by tenant_id when known, else IP.
   await app.register(rateLimit, {
@@ -33,11 +38,16 @@ async function start() {
    * `x-tenant-id` for downstream services. Cached for 5 min.
    */
   app.addHook('onRequest', async (req, reply) => {
-    if (req.url === '/health' || req.url.startsWith('/api/v1/tenants/signup')) return;
+    if (req.url === '/health'
+        || req.url.startsWith('/api/v1/tenants/signup')
+        || req.url.startsWith('/api/v1/onboarding/presets')) return;
 
-    const host = (req.headers.host || '').split(':')[0];
+    // Resolution order: explicit slug header > forwarded host > Host header.
+    const slug = req.headers['x-tenant-slug'];
+    const fwdHost = (req.headers['x-forwarded-host'] || '').split(':')[0];
+    const host = (fwdHost || req.headers.host || '').split(':')[0];
     const base = (process.env.APP_BASE_DOMAIN || 'localhost').split(':')[0];
-    const subdomain = host.endsWith(`.${base}`) ? host.slice(0, -base.length - 1) : null;
+    const subdomain = slug || (host.endsWith(`.${base}`) ? host.slice(0, -base.length - 1) : null);
 
     const cacheKey = cache.globalKey('tenant', subdomain ? 'sub' : 'domain', subdomain || host);
     const tenant = await cache.remember(cacheKey, 300, async () => {
@@ -65,7 +75,14 @@ async function start() {
   /**
    * JWT verification — runs after tenant resolution. Public routes are excluded.
    */
-  const PUBLIC = ['/health', '/api/v1/auth/login', '/api/v1/auth/refresh', '/api/v1/tenants/signup', '/api/v1/tenants/resolve'];
+  const PUBLIC = [
+    '/health',
+    '/api/v1/auth/login',
+    '/api/v1/auth/refresh',
+    '/api/v1/tenants/signup',
+    '/api/v1/tenants/resolve',
+    '/api/v1/onboarding/presets',
+  ];
   app.addHook('preHandler', async (req, reply) => {
     if (PUBLIC.some((p) => req.url.startsWith(p))) return;
 
@@ -91,11 +108,14 @@ async function start() {
   // Reverse-proxy registrations
   await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/tenants', rewritePrefix: '/api/v1/tenants' });
   await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/themes', rewritePrefix: '/api/v1/themes' });
+  await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/onboarding', rewritePrefix: '/api/v1/onboarding' });
+  await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/uploads', rewritePrefix: '/api/v1/uploads' });
   await app.register(proxy, { upstream: AUTH_SVC, prefix: '/api/v1/auth', rewritePrefix: '/api/v1/auth' });
   await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/bookings', rewritePrefix: '/api/v1/bookings' });
   await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/customers', rewritePrefix: '/api/v1/customers' });
   await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/services', rewritePrefix: '/api/v1/services' });
   await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/categories', rewritePrefix: '/api/v1/categories' });
+  await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/commissions', rewritePrefix: '/api/v1/commissions' });
 
   const port = parseInt(process.env.API_GATEWAY_PORT || '3000', 10);
   await app.listen({ port, host: '0.0.0.0' });

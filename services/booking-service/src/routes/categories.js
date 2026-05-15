@@ -23,6 +23,44 @@ module.exports = async function (app) {
     )
   );
 
+  // Bulk-create — wizard step. Each item may include children for one-shot tree creation.
+  app.post('/bulk', async (req, reply) => {
+    if (req.user.role !== 'business_admin' && req.user.role !== 'super_admin') {
+      reply.code(403); return { error: 'business_admin role required' };
+    }
+    const items = Array.isArray(req.body?.items) ? req.body.items : [];
+    if (!items.length) { reply.code(400); return { error: 'items[] required' }; }
+
+    const out = await db.withTenant(req.tenantId, async (c) => {
+      const created = [];
+      for (const item of items) {
+        const { rows } = await c.query(
+          `INSERT INTO service_categories (tenant_id, name, description, parent_category_id, sort_order)
+           VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+          [req.tenantId, item.name, item.description || null, item.parent_category_id || null, item.sort_order || 0]
+        );
+        const parent = rows[0];
+        created.push(parent);
+
+        if (Array.isArray(item.children)) {
+          for (const child of item.children) {
+            const { rows: childRows } = await c.query(
+              `INSERT INTO service_categories (tenant_id, name, description, parent_category_id, sort_order)
+               VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+              [req.tenantId, child.name, child.description || null, parent.id, child.sort_order || 0]
+            );
+            created.push(childRows[0]);
+          }
+        }
+      }
+      return created;
+    });
+
+    await cache.redis.del(cache.key(req.tenantId, 'categories'));
+    reply.code(201);
+    return { data: out };
+  });
+
   app.post('/', async (req, reply) => {
     if (req.user.role !== 'business_admin' && req.user.role !== 'super_admin') {
       reply.code(403); return { error: 'business_admin role required' };

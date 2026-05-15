@@ -5,7 +5,8 @@
   "description": "Multi-tenant Home Services SaaS Platform",
   "workspaces": [
     "services/*",
-    "shared"
+    "shared",
+    "apps/*"
   ],
   "scripts": {
     "dev": "docker-compose up -d postgres redis && npm run migrate && npm run dev:all",

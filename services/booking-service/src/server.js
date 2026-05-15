@@ -10,6 +10,7 @@ const bookingsRoutes = require('./routes/bookings');
 const customersRoutes = require('./routes/customers');
 const servicesRoutes = require('./routes/services');
 const categoriesRoutes = require('./routes/categories');
+const commissionsRoutes = require('./routes/commissions');
 
 const app = Fastify({ loggerInstance: logger });
 
@@ -55,6 +56,7 @@ async function start() {
   app.register(customersRoutes, { prefix: '/api/v1/customers' });
   app.register(servicesRoutes, { prefix: '/api/v1/services' });
   app.register(categoriesRoutes, { prefix: '/api/v1/categories' });
+  app.register(commissionsRoutes, { prefix: '/api/v1/commissions' });
 
   const port = parseInt(process.env.BOOKING_SERVICE_PORT || '3003', 10);
   await app.listen({ port, host: '0.0.0.0' });
