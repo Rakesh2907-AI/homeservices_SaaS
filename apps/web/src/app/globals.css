@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --brand-primary: #0066cc;
-  --brand-secondary: #00b8d9;
+  --brand-primary: #2563eb;
+  --brand-secondary: #06b6d4;
   --brand-bg: #ffffff;
   --brand-text: #0f172a;
 }
@@ -12,6 +12,16 @@
 html, body {
   background: var(--brand-bg);
   color: var(--brand-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Marketing-specific utilities */
+.gradient-text {
+  background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .btn-primary {
