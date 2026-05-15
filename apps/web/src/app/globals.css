@@ -7,13 +7,94 @@
   --brand-secondary: #06b6d4;
   --brand-bg: #ffffff;
   --brand-text: #0f172a;
+
+  /* ===== Admin design tokens =====
+     Scoped under .admin-app so they don't bleed into the public marketing
+     pages, which use the tenant-theme variables above. */
+}
+.admin-app {
+  /* Surfaces */
+  --surface-app:       #f7f8fa;   /* main content background (just barely off-white) */
+  --surface-card:      #ffffff;   /* card / table background */
+  --surface-muted:     #f1f3f7;   /* secondary fills, table head, etc. */
+  --surface-hover:     #f8f9fc;   /* row / button hover */
+  --surface-sidebar:   #0b1020;   /* near-black w/ a hint of blue — Linear-ish */
+  --surface-sidebar-2: #0f1626;   /* sidebar accents */
+
+  /* Borders */
+  --border-subtle:     #eaecf0;
+  --border-default:    #e2e4ea;
+  --border-strong:     #d3d6dd;
+  --border-sidebar:    rgba(255, 255, 255, 0.06);
+
+  /* Text */
+  --text-primary:      #0f1419;
+  --text-secondary:    #4a5563;
+  --text-tertiary:     #8c95a3;
+  --text-disabled:     #b8becb;
+  --text-on-dark:      #e6e9f0;
+  --text-on-dark-muted:#8c95b0;
+
+  /* Accents */
+  --accent:            #2563eb;
+  --accent-soft:       #eff4ff;
+  --accent-text:       #1d4ed8;
+
+  /* Status */
+  --success:           #059669;
+  --success-soft:      #ecfdf5;
+  --warning:           #d97706;
+  --warning-soft:      #fffbeb;
+  --danger:            #dc2626;
+  --danger-soft:       #fef2f2;
+
+  /* Elevation — subtle layered shadows, not the heavy material kind */
+  --shadow-xs: 0 1px 2px rgba(15, 20, 25, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 20, 25, 0.05), 0 1px 2px rgba(15, 20, 25, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(15, 20, 25, 0.06), 0 2px 4px -1px rgba(15, 20, 25, 0.04);
+  --shadow-lg: 0 16px 32px -8px rgba(15, 20, 25, 0.08), 0 4px 8px -4px rgba(15, 20, 25, 0.04);
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  background: var(--surface-app);
+  color: var(--text-primary);
 }
 
 html, body {
   background: var(--brand-bg);
   color: var(--brand-text);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: 'cv02','cv03','cv04','cv11';
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ===== Admin utilities ===== */
+.admin-app .card-elevated { background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.admin-app .card-flat     { background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); }
+.admin-app .hairline      { border-color: var(--border-subtle); }
+.admin-app .text-muted    { color: var(--text-secondary); }
+.admin-app .text-dim      { color: var(--text-tertiary); }
+.admin-app .eyebrow       { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-text); }
+.admin-app .display       { font-size: 30px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); }
+.admin-app .h2            { font-size: 18px; line-height: 1.4; font-weight: 600; letter-spacing: -0.005em; color: var(--text-primary); }
+.admin-app .mono-num      { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+
+/* Skeleton shimmer */
+@keyframes skeleton {
+  0%   { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.admin-app .skeleton {
+  background: linear-gradient(90deg, var(--surface-muted) 0%, #f7f8fa 50%, var(--surface-muted) 100%);
+  background-size: 200px 100%;
+  animation: skeleton 1.4s ease-in-out infinite;
+  border-radius: var(--radius-sm);
 }
 
 /* ===== Marketing utilities ===== */

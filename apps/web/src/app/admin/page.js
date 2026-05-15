@@ -4,7 +4,9 @@ import Link from 'next/link';
 import AdminShell from '@/components/admin/AdminShell';
 import PageHeader from '@/components/admin/PageHeader';
 import MiniChart from '@/components/admin/MiniChart';
-import { KpiCard, SectionHeader, EmptyState, Badge, money } from '@/components/admin/ui';
+import {
+  Button, Card, CardHeader, KpiCard, SectionHeader, EmptyState, Badge, Skeleton, money,
+} from '@/components/admin/ui';
 import { Icon } from '@/components/marketing/icons';
 import { adminFetch } from '@/lib/admin-api';
 
@@ -14,6 +16,7 @@ export default function AdminOverview() {
   const [charts, setCharts] = useState(null);
   const [recentTenants, setRecentTenants] = useState([]);
   const [recentAudit, setRecentAudit] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -22,11 +25,12 @@ export default function AdminOverview() {
       adminFetch('/api/v1/admin/revenue/summary'),
       adminFetch('/api/v1/admin/charts/timeseries?days=30'),
       adminFetch('/api/v1/admin/tenants?limit=5'),
-      adminFetch('/api/v1/admin/audit-logs?limit=8'),
+      adminFetch('/api/v1/admin/audit-logs?limit=6'),
     ]).then(([s, r, c, t, a]) => {
       setStats(s); setRevenue(r); setCharts(c);
       setRecentTenants(t.data); setRecentAudit(a.data);
-    }).catch((e) => setError(e.message));
+      setLoading(false);
+    }).catch((e) => { setError(e.message); setLoading(false); });
   }, []);
 
   const planTotal = revenue?.plan_mix?.reduce((s, r) => s + r.subs, 0) || 1;
@@ -35,132 +39,165 @@ export default function AdminOverview() {
     <AdminShell
       header={
         <PageHeader
-          eyebrow="Platform"
-          title="Welcome back, super admin"
-          description="A high-level pulse of ServiceHub. Drill into any tile for the full picture."
+          eyebrow="Platform overview"
+          title="Welcome back"
+          description="A high-level pulse of ServiceHub — recurring revenue, growth, and what's happening right now."
           breadcrumbs={[{ label: 'Admin', href: '/admin' }, { label: 'Overview' }]}
           actions={
-            <Link href="/admin/notifications" className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-gray-400 transition">
-              <Icon.MessageCircle className="h-4 w-4" /> Inbox
-            </Link>
+            <>
+              <Button href="/admin/audit-logs" variant="ghost" size="sm">
+                <Icon.Newspaper className="h-3.5 w-3.5" /> Audit log
+              </Button>
+              <Button href="/admin/revenue" variant="primary" size="sm">
+                <Icon.Chart className="h-3.5 w-3.5" /> View revenue
+              </Button>
+            </>
           }
         />
       }
     >
-      {error && <div className="mb-6 rounded-md bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">{error}</div>}
+      {error && (
+        <div className="mb-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+      )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <KpiCard label="Monthly recurring revenue" value={money(revenue?.mrr_cents)} hint="across active subscriptions" gradient="from-emerald-500 to-teal-500" Ico={Icon.Dollar} />
-        <KpiCard label="Active subscriptions"      value={revenue?.active_subscriptions ?? '—'} hint={`ARPU ${money(revenue?.arpu_cents)}`} gradient="from-blue-500 to-cyan-500" Ico={Icon.Shield} />
-        <KpiCard label="Outstanding invoices"      value={money(revenue?.outstanding_cents)} hint={`${revenue?.outstanding_count ?? 0} invoices`} gradient="from-amber-500 to-orange-500" Ico={Icon.Newspaper} />
-        <KpiCard label="Churn (30d)"               value={`${revenue?.churn_rate_pct ?? 0}%`} hint={`${revenue?.canceled_30d ?? 0} canceled`} gradient="from-rose-500 to-pink-500" Ico={Icon.Bolt} />
+      {/* KPI ROW */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <KpiCard label="Monthly recurring revenue" value={money(revenue?.mrr_cents)} hint="across all active subs" accent="emerald" Ico={Icon.Dollar} loading={loading} />
+        <KpiCard label="Active subscriptions"      value={revenue?.active_subscriptions ?? '—'} hint={`ARPU ${money(revenue?.arpu_cents)}`} accent="blue" Ico={Icon.Shield} loading={loading} />
+        <KpiCard label="Outstanding invoices"      value={money(revenue?.outstanding_cents)} hint={`${revenue?.outstanding_count ?? 0} unpaid`} accent="amber" Ico={Icon.Newspaper} loading={loading} />
+        <KpiCard label="Churn (30d)"               value={`${revenue?.churn_rate_pct ?? 0}%`} hint={`${revenue?.canceled_30d ?? 0} canceled`} accent="rose" Ico={Icon.Bolt} loading={loading} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-        <ChartCard title="Tenant signups" subtitle="last 30 days" total={charts?.signups?.reduce((s, d) => s + d.n, 0)} data={charts?.signups} color="#2563eb" Ico={Icon.Globe} />
-        <ChartCard title="Bookings"       subtitle="last 30 days" total={charts?.bookings?.reduce((s, d) => s + d.n, 0)} data={charts?.bookings} color="#10b981" Ico={Icon.Calendar} />
+      {/* CHARTS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+        <ChartCard title="Tenant signups" subtitle="last 30 days" total={charts?.signups?.reduce((s, d) => s + d.n, 0)} data={charts?.signups} color="#2563eb" Ico={Icon.Globe} loading={loading} />
+        <ChartCard title="Bookings"       subtitle="last 30 days" total={charts?.bookings?.reduce((s, d) => s + d.n, 0)} data={charts?.bookings} color="#10b981" Ico={Icon.Calendar} loading={loading} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
-          <SectionHeader title="Revenue by plan" description="MRR contribution across active tiers." />
-          {revenue?.plan_mix?.length ? (
-            <div className="space-y-3">
-              {revenue.plan_mix.map((p) => {
-                const pct = Math.round((p.subs / planTotal) * 100);
-                return (
-                  <div key={p.plan_name}>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="font-medium capitalize">{p.plan_name}</span>
-                      <span className="text-gray-500 font-mono">{money(p.mrr_cents)}/mo</span>
+      {/* THREE-COLUMN LOWER GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
+        {/* Revenue by plan */}
+        <Card>
+          <CardHeader title="Revenue by plan" description="MRR contribution across active tiers." />
+          <div className="mt-5">
+            {loading ? (
+              <div className="space-y-4">{[1,2,3].map((i) => <Skeleton key={i} height={28} className="w-full" />)}</div>
+            ) : revenue?.plan_mix?.length ? (
+              <div className="space-y-4">
+                {revenue.plan_mix.map((p) => {
+                  const pct = Math.round((p.subs / planTotal) * 100);
+                  return (
+                    <div key={p.plan_name}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Badge variant="blue">{p.plan_name}</Badge>
+                        <span className="text-sm font-semibold mono-num">{money(p.mrr_cents)}<span className="text-xs text-dim font-normal">/mo</span></span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${Math.max(pct, 3)}%` }} />
+                      </div>
+                      <div className="mt-1 text-[11px] text-dim mono-num">{p.subs} subscribers · {pct}%</div>
                     </div>
-                    <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${Math.max(pct, 3)}%` }} />
-                    </div>
-                    <div className="mt-1 text-xs text-gray-500">{p.subs} subscribers · {pct}%</div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : <p className="text-sm text-gray-500">No active subscriptions yet.</p>}
-        </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted">No active subscriptions yet.</p>
+            )}
+          </div>
+        </Card>
 
-        <div className="lg:col-span-2 rounded-2xl border border-gray-200 bg-white overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
+        {/* Recent tenants */}
+        <Card padding="none" className="lg:col-span-2">
+          <div className="p-6 pb-4">
             <SectionHeader
               title="Latest tenants"
               description="The 5 most recent businesses to join the platform."
-              action={<Link href="/admin/tenants" className="text-sm text-blue-600 hover:underline whitespace-nowrap">View all →</Link>}
+              action={<Link href="/admin/tenants" className="text-sm text-blue-600 hover:text-blue-700 font-medium">View all →</Link>}
             />
           </div>
-          {recentTenants.length === 0 ? (
-            <div className="p-6"><EmptyState title="No tenants yet" description="When a business signs up, they'll show up here." /></div>
+          {loading ? (
+            <div className="px-6 pb-6 space-y-3">{[1,2,3,4].map((i) => <Skeleton key={i} height={48} />)}</div>
+          ) : recentTenants.length === 0 ? (
+            <div className="p-6 pt-0"><EmptyState title="No tenants yet" description="When a business signs up, they'll show up here." /></div>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-t border-gray-100">
               <tbody className="divide-y divide-gray-100">
                 {recentTenants.map((t) => (
-                  <tr key={t.tenant_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-3">
+                  <tr key={t.tenant_id} className="hover:bg-gray-50/70 transition-colors">
+                    <td className="px-6 py-3.5">
                       <Link href={`/admin/tenants/${t.tenant_id}`} className="font-medium text-gray-900 hover:text-blue-600">{t.business_name}</Link>
-                      <div className="text-xs text-gray-500">{t.subdomain}.servicehub.app</div>
+                      <div className="text-xs text-dim">{t.subdomain}.servicehub.app</div>
                     </td>
-                    <td className="px-6 py-3"><Badge variant="blue">{t.plan_tier}</Badge></td>
-                    <td className="px-6 py-3 text-right">
-                      <span className="text-xs text-gray-500">{t.user_count}u · {t.booking_count}b</span>
-                      <div className="text-[10px] text-gray-400 mt-0.5">{new Date(t.created_at).toLocaleDateString()}</div>
+                    <td className="px-6 py-3.5"><Badge variant="blue">{t.plan_tier}</Badge></td>
+                    <td className="px-6 py-3.5 text-right">
+                      <div className="text-xs text-muted mono-num">{t.user_count} users · {t.booking_count} bookings</div>
+                      <div className="text-[10px] text-dim mt-0.5">{new Date(t.created_at).toLocaleDateString()}</div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
-        </div>
+        </Card>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white">
-        <div className="px-6 py-4 border-b border-gray-100">
+      {/* Activity */}
+      <Card padding="none">
+        <div className="p-6 pb-4">
           <SectionHeader
             title="Recent activity"
-            description="Most recent operator and tenant actions, recorded in the audit log."
-            action={<Link href="/admin/audit-logs" className="text-sm text-blue-600 hover:underline whitespace-nowrap">View all →</Link>}
+            description="Most recent operator and tenant actions recorded in the audit log."
+            action={<Link href="/admin/audit-logs" className="text-sm text-blue-600 hover:text-blue-700 font-medium">View all →</Link>}
           />
         </div>
         {recentAudit.length === 0 ? (
-          <div className="p-8"><EmptyState title="Nothing here yet" description="Activity will appear once tenants start using the platform." /></div>
+          <div className="p-6 pt-0"><EmptyState title="Nothing here yet" description="Activity will appear once tenants start using the platform." /></div>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="border-t border-gray-100 divide-y divide-gray-100">
             {recentAudit.map((a) => (
-              <li key={a.id} className="px-6 py-3 flex items-center justify-between text-sm">
+              <li key={a.id} className="px-6 py-3.5 flex items-center justify-between text-sm">
                 <div className="flex items-center gap-3 min-w-0">
                   <Badge variant={a.action === 'CREATE' ? 'green' : a.action === 'UPDATE' ? 'blue' : a.action === 'DELETE' ? 'red' : 'gray'}>{a.action}</Badge>
-                  <span className="font-medium truncate">{a.entity_type}</span>
-                  <span className="text-gray-500 truncate">by {a.actor_email || 'system'}</span>
-                  <span className="text-gray-400 truncate">on <strong>{a.subdomain}</strong></span>
+                  <span className="font-medium text-gray-900 truncate">{a.entity_type}</span>
+                  <span className="text-muted truncate hidden md:inline">by {a.actor_email || 'system'}</span>
+                  <span className="text-dim truncate">on <strong className="text-gray-700">{a.subdomain}</strong></span>
                 </div>
-                <span className="text-xs text-gray-400 flex-shrink-0">{new Date(a.created_at).toLocaleString()}</span>
+                <span className="text-xs text-dim flex-shrink-0 mono-num">{new Date(a.created_at).toLocaleString()}</span>
               </li>
             ))}
           </ul>
         )}
-      </div>
+      </Card>
     </AdminShell>
   );
 }
 
-function ChartCard({ title, subtitle, total, data, color, Ico }) {
+function ChartCard({ title, subtitle, total, data, color, Ico, loading }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6">
-      <div className="flex items-start justify-between mb-2">
+    <Card padding="md">
+      <div className="flex items-start justify-between mb-1">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500">{title}</p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tracking-tight text-gray-900">{total ?? '—'}</span>
-            <span className="text-xs text-gray-500">{subtitle}</span>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{title}</p>
+          <div className="mt-2 flex items-baseline gap-2">
+            {loading ? (
+              <Skeleton height={32} className="w-20" />
+            ) : (
+              <>
+                <span className="display mono-num !text-[28px]">{total ?? '—'}</span>
+                <span className="text-xs text-dim">{subtitle}</span>
+              </>
+            )}
           </div>
         </div>
-        {Ico && <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-gray-100 to-gray-50 text-gray-600 flex items-center justify-center"><Ico className="h-4 w-4" /></div>}
+        {Ico && (
+          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 text-gray-600 flex items-center justify-center">
+            <Ico className="h-4 w-4" />
+          </div>
+        )}
       </div>
-      <div className="mt-4"><MiniChart data={data || []} color={color} height={100} showAxis /></div>
-    </div>
+      <div className="mt-3">
+        {loading ? <Skeleton height={100} /> : <MiniChart data={data || []} color={color} height={100} showAxis />}
+      </div>
+    </Card>
   );
 }

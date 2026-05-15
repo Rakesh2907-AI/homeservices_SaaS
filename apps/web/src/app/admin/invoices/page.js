@@ -3,7 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import AdminShell from '@/components/admin/AdminShell';
 import PageHeader from '@/components/admin/PageHeader';
-import { Badge, EmptyState, money, KpiCard } from '@/components/admin/ui';
+import {
+  Button, Badge, KpiCard, EmptyState, FilterBar,
+  Table, THead, TBody, TR, TH, TD, Skeleton, money,
+} from '@/components/admin/ui';
 import { Icon } from '@/components/marketing/icons';
 import { adminFetch } from '@/lib/admin-api';
 
@@ -19,11 +22,15 @@ const STATUS_META = {
 export default function InvoicesPage() {
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   function load() {
+    setLoading(true);
     const q = filter === 'all' ? '' : `?status=${filter}`;
-    adminFetch(`/api/v1/admin/invoices${q}`).then((r) => setItems(r.data)).catch((e) => setError(e.message));
+    adminFetch(`/api/v1/admin/invoices${q}`)
+      .then((r) => { setItems(r.data); setLoading(false); })
+      .catch((e) => { setError(e.message); setLoading(false); });
   }
   useEffect(load, [filter]); // eslint-disable-line
 
@@ -34,10 +41,8 @@ export default function InvoicesPage() {
   }), [items]);
 
   async function markPaid(id) {
-    try {
-      await adminFetch(`/api/v1/admin/invoices/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'paid' }) });
-      load();
-    } catch (e) { setError(e.message); }
+    try { await adminFetch(`/api/v1/admin/invoices/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'paid' }) }); load(); }
+    catch (e) { setError(e.message); }
   }
 
   return (
@@ -48,71 +53,90 @@ export default function InvoicesPage() {
           title="Invoices"
           description="Every issued invoice across all tenants. Filter by status, mark paid, or open the underlying subscription."
           breadcrumbs={[{ label: 'Admin', href: '/admin' }, { label: 'Revenue', href: '/admin/revenue' }, { label: 'Invoices' }]}
+          tabs={[
+            { label: 'Overview',      href: '/admin/revenue' },
+            { label: 'Subscriptions', href: '/admin/subscriptions' },
+            { label: 'Invoices',      href: '/admin/invoices', active: true },
+            { label: 'Tax rates',     href: '/admin/taxes' },
+            { label: 'Discounts',     href: '/admin/discounts' },
+            { label: 'Plans',         href: '/admin/plans' },
+          ]}
+          actions={<Button variant="secondary" size="sm"><Icon.Newspaper className="h-3.5 w-3.5" /> Export CSV</Button>}
         />
       }
     >
-      {error && <div className="mb-4 rounded-md bg-rose-50 border border-rose-200 px-4 py-2 text-sm text-rose-700">{error}</div>}
+      {error && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">{error}</div>}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <KpiCard label="Paid this view"  value={money(totals.paid)}    gradient="from-emerald-500 to-teal-500" Ico={Icon.Check} />
-        <KpiCard label="Awaiting payment" value={money(totals.sent)}    gradient="from-blue-500 to-cyan-500"    Ico={Icon.Mail} />
-        <KpiCard label="Overdue"          value={money(totals.overdue)} gradient="from-rose-500 to-pink-500"    Ico={Icon.Bolt} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <KpiCard label="Paid this view"   value={money(totals.paid)}    accent="emerald" Ico={Icon.Check}   loading={loading} />
+        <KpiCard label="Awaiting payment" value={money(totals.sent)}    accent="blue"    Ico={Icon.Mail}    loading={loading} />
+        <KpiCard label="Overdue"          value={money(totals.overdue)} accent="rose"    Ico={Icon.Bolt}    loading={loading} />
       </div>
 
-      <div className="mb-4 flex gap-2 flex-wrap">
-        {['all', 'sent', 'paid', 'overdue', 'void', 'refunded'].map((s) => (
-          <button key={s} onClick={() => setFilter(s)}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize transition ${filter === s ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-          >
-            {s}
-          </button>
-        ))}
+      <div className="mb-4">
+        <FilterBar
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'all',      label: 'All' },
+            { value: 'sent',     label: 'Sent' },
+            { value: 'paid',     label: 'Paid' },
+            { value: 'overdue',  label: 'Overdue' },
+            { value: 'void',     label: 'Void' },
+            { value: 'refunded', label: 'Refunded' },
+          ]}
+        />
       </div>
 
-      {items.length === 0 ? (
-        <EmptyState title="No invoices in this view" description="Invoices appear here after a subscription period closes or when manually issued." />
+      {loading ? (
+        <Table>
+          <THead><TH>Invoice</TH><TH>Tenant</TH><TH>Issued</TH><TH>Due</TH><TH align="right">Total</TH><TH>Status</TH><TH /></THead>
+          <TBody>{[1,2,3,4,5,6].map((i) => (
+            <TR key={i} hover={false}>
+              {[1,2,3,4,5,6,7].map((c) => <TD key={c}><Skeleton height={14} className="w-full max-w-[100px]" /></TD>)}
+            </TR>
+          ))}</TBody>
+        </Table>
+      ) : items.length === 0 ? (
+        <EmptyState icon={Icon.Newspaper} title="No invoices in this view" description="Invoices appear here after a subscription period closes or when manually issued." />
       ) : (
-        <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 border-b border-gray-100 bg-gray-50">
-                <th className="px-6 py-3">Invoice</th>
-                <th className="px-6 py-3">Tenant</th>
-                <th className="px-6 py-3">Issued</th>
-                <th className="px-6 py-3">Due</th>
-                <th className="px-6 py-3 text-right">Total</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {items.map((i) => {
-                const meta = STATUS_META[i.status] || STATUS_META.draft;
-                return (
-                  <tr key={i.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-3 font-mono text-xs font-semibold">{i.invoice_number}</td>
-                    <td className="px-6 py-3">
-                      <Link href={`/admin/tenants/${i.tenant_id}`} className="hover:text-blue-600">{i.business_name}</Link>
-                      <div className="text-xs text-gray-500">{i.subdomain}</div>
-                    </td>
-                    <td className="px-6 py-3 text-xs text-gray-600">{new Date(i.issued_at).toLocaleDateString()}</td>
-                    <td className="px-6 py-3 text-xs text-gray-600">{i.due_at ? new Date(i.due_at).toLocaleDateString() : '—'}</td>
-                    <td className="px-6 py-3 text-right">
-                      <div className="font-mono font-semibold">{money(i.total_cents)}</div>
-                      {i.tax_cents > 0 && <div className="text-[10px] text-gray-500">+{money(i.tax_cents)} tax</div>}
-                    </td>
-                    <td className="px-6 py-3"><Badge variant={meta.variant}>{meta.label}</Badge></td>
-                    <td className="px-6 py-3 text-right">
-                      {i.status !== 'paid' && i.status !== 'void' && (
-                        <button onClick={() => markPaid(i.id)} className="text-xs text-emerald-600 hover:underline">Mark paid</button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <THead>
+            <TH>Invoice</TH>
+            <TH>Tenant</TH>
+            <TH>Issued</TH>
+            <TH>Due</TH>
+            <TH align="right">Total</TH>
+            <TH>Status</TH>
+            <TH />
+          </THead>
+          <TBody>
+            {items.map((i) => {
+              const meta = STATUS_META[i.status] || STATUS_META.draft;
+              return (
+                <TR key={i.id}>
+                  <TD><code className="font-mono text-xs font-semibold text-gray-900">{i.invoice_number}</code></TD>
+                  <TD>
+                    <Link href={`/admin/tenants/${i.tenant_id}`} className="font-medium hover:text-blue-600">{i.business_name}</Link>
+                    <div className="text-xs text-dim">{i.subdomain}</div>
+                  </TD>
+                  <TD className="text-xs text-muted mono-num">{new Date(i.issued_at).toLocaleDateString()}</TD>
+                  <TD className="text-xs text-muted mono-num">{i.due_at ? new Date(i.due_at).toLocaleDateString() : '—'}</TD>
+                  <TD align="right">
+                    <div className="mono-num font-semibold">{money(i.total_cents)}</div>
+                    {i.tax_cents > 0 && <div className="text-[10px] text-dim mono-num">+{money(i.tax_cents)} tax</div>}
+                  </TD>
+                  <TD><Badge variant={meta.variant}>{meta.label}</Badge></TD>
+                  <TD align="right">
+                    {i.status !== 'paid' && i.status !== 'void' && (
+                      <button onClick={() => markPaid(i.id)} className="text-xs text-emerald-600 hover:underline font-medium">Mark paid</button>
+                    )}
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
       )}
     </AdminShell>
   );

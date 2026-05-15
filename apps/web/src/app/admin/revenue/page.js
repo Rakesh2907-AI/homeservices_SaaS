@@ -1,28 +1,33 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import AdminShell from '@/components/admin/AdminShell';
 import PageHeader from '@/components/admin/PageHeader';
 import MiniChart from '@/components/admin/MiniChart';
-import { KpiCard, SectionHeader, EmptyState, Badge, money } from '@/components/admin/ui';
+import {
+  Button, Card, CardHeader, KpiCard, SectionHeader, EmptyState, Badge,
+  Table, THead, TBody, TR, TH, TD, Skeleton, money,
+} from '@/components/admin/ui';
 import { Icon } from '@/components/marketing/icons';
 import { adminFetch } from '@/lib/admin-api';
 
 export default function RevenuePage() {
   const [summary, setSummary] = useState(null);
   const [timeseries, setTimeseries] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     Promise.all([
       adminFetch('/api/v1/admin/revenue/summary'),
       adminFetch('/api/v1/admin/revenue/timeseries?months=6'),
-    ]).then(([s, t]) => { setSummary(s); setTimeseries(t.data); }).catch((e) => setError(e.message));
+    ]).then(([s, t]) => { setSummary(s); setTimeseries(t.data); setLoading(false); })
+      .catch((e) => { setError(e.message); setLoading(false); });
   }, []);
 
-  // MiniChart wants { day, n } — transform billings per month into that shape.
-  const billedSeries = timeseries.map((m) => ({ day: m.month, n: Math.round(m.billed_cents / 100) }));
+  const billedSeries  = timeseries.map((m) => ({ day: m.month, n: Math.round(m.billed_cents / 100) }));
   const pendingSeries = timeseries.map((m) => ({ day: m.month, n: Math.round(m.pending_cents / 100) }));
+  const totalBilled  = timeseries.reduce((s, m) => s + m.billed_cents, 0);
+  const totalPending = timeseries.reduce((s, m) => s + m.pending_cents, 0);
 
   return (
     <AdminShell
@@ -43,68 +48,72 @@ export default function RevenuePage() {
         />
       }
     >
-      {error && <div className="mb-6 rounded-md bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">{error}</div>}
+      {error && <div className="mb-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <KpiCard label="Monthly recurring revenue" value={money(summary?.mrr_cents)}    hint="MRR · all active subs" gradient="from-emerald-500 to-teal-500" Ico={Icon.Dollar} />
-        <KpiCard label="Annual run rate"           value={money(summary?.arr_cents)}    hint="MRR × 12"               gradient="from-blue-500 to-cyan-500"    Ico={Icon.Chart} />
-        <KpiCard label="ARPU"                       value={money(summary?.arpu_cents)}   hint="avg revenue per user"   gradient="from-violet-500 to-purple-500" Ico={Icon.Shield} />
-        <KpiCard label="Outstanding"               value={money(summary?.outstanding_cents)} hint={`${summary?.outstanding_count || 0} invoices`} gradient="from-amber-500 to-orange-500" Ico={Icon.Newspaper} />
+        <KpiCard label="Monthly recurring revenue" value={money(summary?.mrr_cents)}        hint="MRR · all active subs" accent="emerald" Ico={Icon.Dollar} loading={loading} />
+        <KpiCard label="Annual run rate"            value={money(summary?.arr_cents)}        hint="MRR × 12"               accent="blue"    Ico={Icon.Chart}  loading={loading} />
+        <KpiCard label="Average revenue per user"   value={money(summary?.arpu_cents)}       hint="ARPU"                   accent="violet"  Ico={Icon.Shield} loading={loading} />
+        <KpiCard label="Outstanding"                value={money(summary?.outstanding_cents)} hint={`${summary?.outstanding_count || 0} invoices unpaid`} accent="amber" Ico={Icon.Newspaper} loading={loading} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
-          <SectionHeader title="Billed" description="Successfully paid invoices, monthly." />
-          <div className="text-3xl font-bold mb-3">{money(timeseries.reduce((s, m) => s + m.billed_cents, 0))}</div>
-          <MiniChart data={billedSeries} color="#10b981" height={120} showAxis />
-        </div>
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
-          <SectionHeader title="Pending collection" description="Invoices issued but not yet paid." />
-          <div className="text-3xl font-bold mb-3">{money(timeseries.reduce((s, m) => s + m.pending_cents, 0))}</div>
-          <MiniChart data={pendingSeries} color="#f59e0b" height={120} showAxis />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+        <Card>
+          <CardHeader title="Billed" description="Successfully paid invoices, monthly." />
+          <div className="display mono-num !text-2xl mt-3 mb-4">{money(totalBilled)}</div>
+          {loading ? <Skeleton height={120} /> : <MiniChart data={billedSeries} color="#10b981" height={120} showAxis />}
+        </Card>
+        <Card>
+          <CardHeader title="Pending collection" description="Invoices issued but not yet paid." />
+          <div className="display mono-num !text-2xl mt-3 mb-4">{money(totalPending)}</div>
+          {loading ? <Skeleton height={120} /> : <MiniChart data={pendingSeries} color="#f59e0b" height={120} showAxis />}
+        </Card>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 mb-8">
-        <SectionHeader title="Plan performance" description="MRR contribution and subscriber count per plan tier." />
+      <Card padding="none" className="mb-8">
+        <div className="p-6 pb-4">
+          <SectionHeader
+            title="Plan performance"
+            description="MRR contribution and subscriber count per plan tier."
+            action={<Button href="/admin/plans" variant="ghost" size="sm">Manage plans →</Button>}
+          />
+        </div>
         {summary?.plan_mix?.length ? (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs uppercase tracking-wider text-gray-500 border-b border-gray-100">
-                <th className="py-2">Plan</th>
-                <th className="py-2 text-right">Subscribers</th>
-                <th className="py-2 text-right">MRR</th>
-                <th className="py-2 text-right">ARPU</th>
-                <th className="py-2 text-right">Share</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+          <Table className="border-0 rounded-none shadow-none">
+            <THead>
+              <TH>Plan</TH>
+              <TH align="right">Subscribers</TH>
+              <TH align="right">MRR</TH>
+              <TH align="right">ARPU</TH>
+              <TH align="right">Share</TH>
+            </THead>
+            <TBody>
               {summary.plan_mix.map((p) => {
-                const arpu = p.subs ? Math.round(p.mrr_cents / p.subs) : 0;
+                const arpu  = p.subs ? Math.round(p.mrr_cents / p.subs) : 0;
                 const share = Math.round((p.mrr_cents / (summary.mrr_cents || 1)) * 100);
                 return (
-                  <tr key={p.plan_name}>
-                    <td className="py-3"><Badge variant="blue">{p.plan_name}</Badge></td>
-                    <td className="py-3 text-right font-mono">{p.subs}</td>
-                    <td className="py-3 text-right font-mono font-semibold">{money(p.mrr_cents)}</td>
-                    <td className="py-3 text-right font-mono">{money(arpu)}</td>
-                    <td className="py-3 text-right">
-                      <div className="inline-flex items-center gap-2">
-                        <span className="text-xs text-gray-600 w-10 text-right">{share}%</span>
+                  <TR key={p.plan_name}>
+                    <TD><Badge variant="blue">{p.plan_name}</Badge></TD>
+                    <TD align="right" className="mono-num font-medium">{p.subs}</TD>
+                    <TD align="right" className="mono-num font-semibold text-gray-900">{money(p.mrr_cents)}</TD>
+                    <TD align="right" className="mono-num text-muted">{money(arpu)}</TD>
+                    <TD align="right">
+                      <div className="inline-flex items-center gap-2 justify-end">
+                        <span className="text-xs text-muted w-10 text-right mono-num">{share}%</span>
                         <div className="h-1.5 rounded-full bg-gray-100 w-24 overflow-hidden">
                           <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${share}%` }} />
                         </div>
                       </div>
-                    </td>
-                  </tr>
+                    </TD>
+                  </TR>
                 );
               })}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         ) : (
-          <EmptyState title="No subscriptions yet" description="Once tenants sign up, their plan contribution will appear here." />
+          <div className="p-6 pt-0"><EmptyState title="No subscriptions yet" description="Once tenants subscribe, their plan contribution will appear here." /></div>
         )}
-      </div>
+      </Card>
     </AdminShell>
   );
 }
