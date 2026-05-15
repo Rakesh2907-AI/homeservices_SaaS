@@ -1,0 +1,33 @@
+# Prometheus scrape config for ServiceHub. Scrapes /metrics on every Node service
+# every 10s. In production these `host.docker.internal` targets become the
+# Kubernetes service DNS names and the values are managed by the Helm chart.
+global:
+  scrape_interval: 10s
+  scrape_timeout: 5s
+  external_labels:
+    monitor: 'servicehub-platform'
+
+scrape_configs:
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['host.docker.internal:3000']
+        labels: { service: 'api-gateway' }
+
+  - job_name: 'tenant-service'
+    static_configs:
+      - targets: ['host.docker.internal:3001']
+        labels: { service: 'tenant-service' }
+
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['host.docker.internal:3002']
+        labels: { service: 'auth-service' }
+
+  - job_name: 'booking-service'
+    static_configs:
+      - targets: ['host.docker.internal:3003']
+        labels: { service: 'booking-service' }
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

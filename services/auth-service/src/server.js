@@ -5,6 +5,7 @@ const Fastify = require('fastify');
 const cors = require('@fastify/cors');
 const helmet = require('@fastify/helmet');
 const { logger } = require('@hs/shared');
+const { registerMetrics } = require('@hs/shared/metrics');
 
 const authRoutes = require('./routes/auth');
 
@@ -15,6 +16,7 @@ async function start() {
   await app.register(cors, { origin: true, credentials: true });
 
   app.get('/health', async () => ({ status: 'ok', service: 'auth-service' }));
+  registerMetrics(app, 'auth-service');
   app.register(authRoutes, { prefix: '/api/v1/auth' });
 
   const port = parseInt(process.env.AUTH_SERVICE_PORT || '3002', 10);

@@ -6,7 +6,8 @@
   "workspaces": [
     "services/*",
     "shared",
-    "apps/*"
+    "apps/*",
+    "tests"
   ],
   "scripts": {
     "dev": "docker-compose up -d postgres redis && npm run migrate && npm run dev:all",

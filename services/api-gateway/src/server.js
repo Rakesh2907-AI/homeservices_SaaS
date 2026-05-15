@@ -7,6 +7,7 @@ const helmet = require('@fastify/helmet');
 const rateLimit = require('@fastify/rate-limit');
 const proxy = require('@fastify/http-proxy');
 const { logger, cache, db, jwt: jwtUtil } = require('@hs/shared');
+const { registerMetrics } = require('@hs/shared/metrics');
 
 const TENANT_SVC = `http://localhost:${process.env.TENANT_SERVICE_PORT || 3001}`;
 const AUTH_SVC = `http://localhost:${process.env.AUTH_SERVICE_PORT || 3002}`;
@@ -32,6 +33,7 @@ async function start() {
   });
 
   app.get('/health', async () => ({ status: 'ok', service: 'api-gateway' }));
+  registerMetrics(app, 'api-gateway');
 
   /**
    * Resolve tenant from host (subdomain or custom domain) and inject
@@ -42,7 +44,9 @@ async function start() {
         || req.url.startsWith('/api/v1/tenants/signup')
         || req.url.startsWith('/api/v1/onboarding/presets')
         || req.url.startsWith('/api/v1/auth/admin-login')
-        || req.url.startsWith('/api/v1/admin')) return;
+        || req.url.startsWith('/api/v1/admin')
+        || req.url.startsWith('/api/v1/public')   // slug is in the URL path
+        || req.url.startsWith('/metrics')) return;
 
     // Resolution order: explicit slug header > forwarded host > Host header.
     const slug = req.headers['x-tenant-slug'];
@@ -86,6 +90,8 @@ async function start() {
     '/api/v1/tenants/resolve',
     '/api/v1/onboarding/presets',
     '/api/v1/admin', // admin routes do their own auth (super_admin check)
+    '/api/v1/public', // public portal routes — no auth, slug in URL
+    '/metrics',       // prometheus scrape endpoints
   ];
   app.addHook('preHandler', async (req, reply) => {
     if (PUBLIC.some((p) => req.url.startsWith(p))) return;
@@ -115,6 +121,8 @@ async function start() {
   await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/onboarding', rewritePrefix: '/api/v1/onboarding' });
   await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/uploads', rewritePrefix: '/api/v1/uploads' });
   await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/admin', rewritePrefix: '/api/v1/admin' });
+  await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/public', rewritePrefix: '/api/v1/public' });
+  await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/quotes', rewritePrefix: '/api/v1/quotes' });
   await app.register(proxy, { upstream: AUTH_SVC, prefix: '/api/v1/auth', rewritePrefix: '/api/v1/auth' });
   await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/bookings', rewritePrefix: '/api/v1/bookings' });
   await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/customers', rewritePrefix: '/api/v1/customers' });

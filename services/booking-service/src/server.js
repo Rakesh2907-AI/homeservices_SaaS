@@ -5,12 +5,14 @@ const Fastify = require('fastify');
 const cors = require('@fastify/cors');
 const helmet = require('@fastify/helmet');
 const { logger, middleware } = require('@hs/shared');
+const { registerMetrics } = require('@hs/shared/metrics');
 
 const bookingsRoutes = require('./routes/bookings');
 const customersRoutes = require('./routes/customers');
 const servicesRoutes = require('./routes/services');
 const categoriesRoutes = require('./routes/categories');
 const commissionsRoutes = require('./routes/commissions');
+const quotesRoutes = require('./routes/quotes');
 
 const app = Fastify({ loggerInstance: logger });
 
@@ -19,11 +21,12 @@ async function start() {
   await app.register(cors, { origin: true, credentials: true });
 
   app.get('/health', async () => ({ status: 'ok', service: 'booking-service' }));
+  registerMetrics(app, 'booking-service');
 
   // Express-style middleware bridge for Fastify: use preHandler.
   // Every authenticated route requires both tenant context AND auth.
   app.addHook('preHandler', async (req, reply) => {
-    if (req.url === '/health') return;
+    if (req.url === '/health' || req.url === '/metrics') return;
 
     const tenantId = req.headers['x-tenant-id'];
     if (!tenantId) {
@@ -57,6 +60,7 @@ async function start() {
   app.register(servicesRoutes, { prefix: '/api/v1/services' });
   app.register(categoriesRoutes, { prefix: '/api/v1/categories' });
   app.register(commissionsRoutes, { prefix: '/api/v1/commissions' });
+  app.register(quotesRoutes, { prefix: '/api/v1/quotes' });
 
   const port = parseInt(process.env.BOOKING_SERVICE_PORT || '3003', 10);
   await app.listen({ port, host: '0.0.0.0' });

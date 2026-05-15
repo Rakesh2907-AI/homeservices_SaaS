@@ -1,0 +1,80 @@
+{
+  "title": "ServiceHub — Platform Overview",
+  "uid": "servicehub-overview",
+  "schemaVersion": 38,
+  "version": 1,
+  "tags": ["servicehub", "platform"],
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Request rate (req/s)",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 1 } },
+      "targets": [{ "expr": "sum(rate(http_requests_total[1m]))", "refId": "A" }]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Error rate (5xx %)",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] } } },
+      "targets": [{ "expr": "100 * sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))", "refId": "A" }]
+    },
+    {
+      "id": 3, "type": "stat", "title": "p95 latency (ms)",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "fieldConfig": { "defaults": { "unit": "ms", "decimals": 0 } },
+      "targets": [{ "expr": "1000 * histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m])))", "refId": "A" }]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Active services",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "count(up{job=~\"api-gateway|tenant-service|auth-service|booking-service\"} == 1)", "refId": "A" }]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Requests / sec by service",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [{ "expr": "sum by (service) (rate(http_requests_total[1m]))", "legendFormat": "{{service}}", "refId": "A" }]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "p95 latency by service (ms)",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "targets": [{ "expr": "1000 * histogram_quantile(0.95, sum by (le, service) (rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "{{service}}", "refId": "A" }]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "HTTP status mix",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum by (status) (rate(http_requests_total[1m]))", "legendFormat": "{{status}}", "refId": "A" }]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "Node heap (MB)",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "decmbytes" } },
+      "targets": [{ "expr": "hs_nodejs_heap_size_used_bytes / 1024 / 1024", "legendFormat": "{{service}}", "refId": "A" }]
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Event-loop lag (seconds)",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [{ "expr": "hs_nodejs_eventloop_lag_seconds", "legendFormat": "{{service}}", "refId": "A" }]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Top routes by request rate",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "reqps" } },
+      "targets": [{ "expr": "topk(10, sum by (route) (rate(http_requests_total[5m])))", "legendFormat": "{{route}}", "refId": "A" }]
+    }
+  ]
+}

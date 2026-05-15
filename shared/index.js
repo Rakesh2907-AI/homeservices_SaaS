@@ -4,6 +4,7 @@ module.exports = {
   logger: require('./utils/logger'),
   errors: require('./utils/errors'),
   jwt: require('./utils/jwt'),
+  pricing: require('./pricing/engine'),
   middleware: {
     tenantContext: require('./middleware/tenantContext'),
     auth: require('./middleware/auth'),
