@@ -123,8 +123,11 @@ async function start() {
   await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/commissions', rewritePrefix: '/api/v1/commissions' });
 
   const port = parseInt(process.env.API_GATEWAY_PORT || '3000', 10);
-  await app.listen({ port, host: '0.0.0.0' });
-  logger.info(`api-gateway listening on :${port}`);
+  // Bind dual-stack (IPv6 + IPv4-mapped) so whether `localhost` resolves to
+  // ::1 or 127.0.0.1 we own the socket. Otherwise a stray IPv6 dev server
+  // on the same port can silently hijack requests from the browser.
+  await app.listen({ port, host: '::' });
+  logger.info(`api-gateway listening on :${port} (dual-stack)`);
 }
 
 start().catch((err) => {
