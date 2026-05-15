@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import { Section, Eyebrow, H2, Lead } from '@/components/marketing/Section';
+import { AmbientBlobs, DotGrid, FeatureIcon } from '@/components/marketing/decorations';
+import { Icon } from '@/components/marketing/icons';
 
 const OFFICES = [
   { city: 'Portland, OR', address: '1234 SW Morrison St, Floor 4\nPortland, OR 97205', tag: 'Headquarters' },
@@ -10,10 +12,10 @@ const OFFICES = [
 ];
 
 const CHANNELS = [
-  { icon: '💬', title: 'Sales', desc: 'Talk to someone about pricing, demos, or enterprise plans.', cta: 'sales@servicehub.app' },
-  { icon: '🆘', title: 'Support', desc: 'Existing customer? Our team replies in under 2 hours during business days.', cta: 'support@servicehub.app' },
-  { icon: '🤝', title: 'Partnerships', desc: 'Integration partners, affiliates, and resellers.', cta: 'partners@servicehub.app' },
-  { icon: '📰', title: 'Press & media', desc: 'Press kit, exec bios, brand assets.', cta: 'press@servicehub.app' },
+  { Ico: Icon.MessageCircle, title: 'Sales', desc: 'Talk to someone about pricing, demos, or enterprise plans.', cta: 'sales@servicehub.app', gradient: 'from-blue-500 to-cyan-500' },
+  { Ico: Icon.Phone, title: 'Support', desc: 'Existing customer? Our team replies in under 2 hours during business days.', cta: 'support@servicehub.app', gradient: 'from-emerald-500 to-teal-500' },
+  { Ico: Icon.Handshake, title: 'Partnerships', desc: 'Integration partners, affiliates, and resellers.', cta: 'partners@servicehub.app', gradient: 'from-violet-500 to-purple-500' },
+  { Ico: Icon.Newspaper, title: 'Press & media', desc: 'Press kit, exec bios, brand assets.', cta: 'press@servicehub.app', gradient: 'from-amber-500 to-orange-500' },
 ];
 
 export default function ContactPage() {
@@ -29,13 +31,17 @@ export default function ContactPage() {
 
   return (
     <MarketingLayout>
-      <Section>
-        <div className="text-center max-w-3xl mx-auto">
-          <Eyebrow>Get in touch</Eyebrow>
-          <H2 className="mx-auto">Let&apos;s talk</H2>
-          <Lead className="mx-auto">Have a question, want a demo, or interested in partnering? We respond to every message within one business day.</Lead>
-        </div>
-      </Section>
+      <section className="relative bg-white overflow-hidden">
+        <AmbientBlobs />
+        <DotGrid className="opacity-30" />
+        <Section>
+          <div className="text-center max-w-3xl mx-auto">
+            <Eyebrow>Get in touch</Eyebrow>
+            <H2 className="mx-auto">Let&apos;s talk</H2>
+            <Lead className="mx-auto">Have a question, want a demo, or interested in partnering? We respond to every message within one business day.</Lead>
+          </div>
+        </Section>
+      </section>
 
       {/* CONTACT FORM + CHANNELS */}
       <Section bg="gray">
@@ -102,12 +108,14 @@ export default function ContactPage() {
             <h3 className="text-2xl font-bold text-gray-900 mb-6">Or reach us directly</h3>
             <div className="space-y-4">
               {CHANNELS.map((c) => (
-                <div key={c.title} className="flex gap-4 rounded-lg bg-white border border-gray-200 p-5">
-                  <div className="text-3xl">{c.icon}</div>
+                <div key={c.title} className="flex gap-4 rounded-lg bg-white border border-gray-200 p-5 lift">
+                  <FeatureIcon gradient={c.gradient}>
+                    <c.Ico className="h-6 w-6" />
+                  </FeatureIcon>
                   <div>
                     <h4 className="font-semibold text-gray-900">{c.title}</h4>
                     <p className="text-sm text-gray-600 mt-1">{c.desc}</p>
-                    <a href={`mailto:${c.cta}`} className="text-sm text-blue-600 font-medium mt-2 inline-block hover:underline">{c.cta}</a>
+                    <a href={`mailto:${c.cta}`} className="link-underline text-sm text-blue-600 font-medium mt-2 inline-block">{c.cta}</a>
                   </div>
                 </div>
               ))}
@@ -124,10 +132,16 @@ export default function ContactPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {OFFICES.map((o) => (
-            <div key={o.city} className="rounded-xl border border-gray-200 p-6">
-              <span className="text-xs font-medium text-blue-600 uppercase tracking-wider">{o.tag}</span>
-              <h3 className="mt-2 text-xl font-bold text-gray-900">{o.city}</h3>
-              <p className="mt-3 text-sm text-gray-600 whitespace-pre-line">{o.address}</p>
+            <div key={o.city} className="group relative rounded-xl border border-gray-200 p-6 lift overflow-hidden">
+              <div aria-hidden className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-blue-100 opacity-0 group-hover:opacity-100 blur-2xl transition-opacity" />
+              <div className="relative">
+                <div className="flex items-center gap-2">
+                  <Icon.Map className="h-4 w-4 text-blue-600" />
+                  <span className="text-xs font-medium text-blue-600 uppercase tracking-wider">{o.tag}</span>
+                </div>
+                <h3 className="mt-2 text-xl font-bold text-gray-900">{o.city}</h3>
+                <p className="mt-3 text-sm text-gray-600 whitespace-pre-line">{o.address}</p>
+              </div>
             </div>
           ))}
         </div>

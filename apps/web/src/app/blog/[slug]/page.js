@@ -2,7 +2,18 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import { Section } from '@/components/marketing/Section';
+import { Icon } from '@/components/marketing/icons';
 import { getPost, getAllPosts } from '@/lib/blog-posts';
+
+function coverFor(category) {
+  const map = {
+    Engineering: { gradient: 'from-blue-500 via-cyan-400 to-blue-600', Ico: Icon.Code },
+    Operations:  { gradient: 'from-emerald-500 via-teal-400 to-cyan-500', Ico: Icon.Calendar },
+    Business:    { gradient: 'from-amber-500 via-orange-400 to-rose-500', Ico: Icon.Dollar },
+    'Customer stories': { gradient: 'from-violet-500 via-purple-400 to-pink-500', Ico: Icon.Star },
+  };
+  return map[category] || map.Engineering;
+}
 
 export async function generateStaticParams() {
   return getAllPosts().map((p) => ({ slug: p.slug }));
@@ -72,6 +83,7 @@ export default function BlogPost({ params }) {
 
   const allPosts = getAllPosts();
   const related = allPosts.filter((p) => p.slug !== post.slug).slice(0, 3);
+  const cover = coverFor(post.category);
 
   return (
     <MarketingLayout>
@@ -101,8 +113,13 @@ export default function BlogPost({ params }) {
 
       {/* COVER */}
       <div className="max-w-4xl mx-auto px-6 -mt-2">
-        <div className="aspect-[16/8] rounded-2xl bg-gradient-to-br from-blue-100 via-cyan-50 to-blue-50 border border-gray-200 flex items-center justify-center">
-          <div className="text-8xl opacity-60">📰</div>
+        <div className={`relative aspect-[16/8] rounded-2xl bg-gradient-to-br ${cover.gradient} flex items-center justify-center overflow-hidden`}>
+          <div aria-hidden className="absolute inset-0 opacity-20">
+            <div className="absolute top-10 left-10 h-32 w-32 rounded-full border-2 border-white" />
+            <div className="absolute bottom-10 right-10 h-48 w-48 rounded-full border-2 border-white" />
+            <div className="absolute top-1/2 left-1/3 h-24 w-24 rotate-45 border-2 border-white" />
+          </div>
+          <cover.Ico className="relative h-32 w-32 text-white opacity-90" />
         </div>
       </div>
 

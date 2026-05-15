@@ -3,6 +3,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import { Section, Eyebrow, H2, Lead } from '@/components/marketing/Section';
+import { AmbientBlobs, DotGrid } from '@/components/marketing/decorations';
+import { Icon } from '@/components/marketing/icons';
 
 const TIERS = [
   {
@@ -97,7 +99,10 @@ export default function PricingPage() {
   return (
     <MarketingLayout>
       {/* HERO + TOGGLE */}
-      <Section>
+      <section className="relative bg-white overflow-hidden">
+        <AmbientBlobs />
+        <DotGrid className="opacity-30" />
+        <div className="max-w-7xl mx-auto px-6 py-20 md:py-24 relative">
         <div className="text-center max-w-3xl mx-auto">
           <Eyebrow>Pricing</Eyebrow>
           <H2 className="mx-auto">Simple, transparent pricing</H2>
@@ -124,12 +129,15 @@ export default function PricingPage() {
           {TIERS.map((t) => (
             <div
               key={t.name}
-              className={`relative rounded-2xl border bg-white p-8 ${t.popular ? 'border-gray-900 shadow-lg md:scale-105' : 'border-gray-200'}`}
+              className={`relative rounded-2xl border bg-white p-8 lift ${t.popular ? 'border-gray-900 shadow-2xl shadow-gray-900/10 md:scale-105' : 'border-gray-200'}`}
             >
               {t.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white">
-                  Most popular
-                </div>
+                <>
+                  <div className="absolute inset-x-0 -top-px h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-500 rounded-t-2xl" />
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-3 py-1 text-xs font-medium text-white shadow-lg shadow-blue-500/30">
+                    Most popular
+                  </div>
+                </>
               )}
               <h3 className="text-lg font-semibold text-gray-900">{t.name}</h3>
               <p className="mt-2 text-sm text-gray-600 min-h-[40px]">{t.description}</p>
@@ -149,9 +157,9 @@ export default function PricingPage() {
               <ul className="mt-8 space-y-3">
                 {t.features.map((f) => (
                   <li key={f} className="flex gap-2 text-sm text-gray-700">
-                    <svg className="h-5 w-5 flex-shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
+                    <div className="flex-shrink-0 mt-0.5 h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Icon.Check className="h-3 w-3 text-blue-600" />
+                    </div>
                     {f}
                   </li>
                 ))}
@@ -159,7 +167,8 @@ export default function PricingPage() {
             </div>
           ))}
         </div>
-      </Section>
+        </div>
+      </section>
 
       {/* COMPARISON TABLE */}
       <Section bg="gray">

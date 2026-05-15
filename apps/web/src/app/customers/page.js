@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import { Section, Eyebrow, H2, Lead } from '@/components/marketing/Section';
+import { AmbientBlobs, DotGrid } from '@/components/marketing/decorations';
+import AnimatedCounter from '@/components/marketing/AnimatedCounter';
+import { Icon } from '@/components/marketing/icons';
 
 export const metadata = {
   title: 'Customer stories — ServiceHub',
@@ -73,23 +76,32 @@ const STORIES = [
 export default function CustomersPage() {
   return (
     <MarketingLayout>
-      <Section>
-        <div className="max-w-3xl">
-          <Eyebrow>Customer stories</Eyebrow>
-          <H2>Real businesses. Real results.</H2>
-          <Lead>From solo operators to multi-state franchises, here&apos;s how service businesses use ServiceHub to grow.</Lead>
-        </div>
-      </Section>
+      <section className="relative bg-white overflow-hidden">
+        <AmbientBlobs />
+        <DotGrid className="opacity-30" />
+        <Section>
+          <div className="max-w-3xl">
+            <Eyebrow>Customer stories</Eyebrow>
+            <H2>Real businesses. Real results.</H2>
+            <Lead>From solo operators to multi-state franchises, here&apos;s how service businesses use ServiceHub to grow.</Lead>
+          </div>
+        </Section>
+      </section>
 
       <Section bg="gray">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {STORIES.map((s) => (
-            <article key={s.company} className="rounded-2xl bg-white border border-gray-200 overflow-hidden">
-              <div className={`aspect-[16/8] bg-gradient-to-br ${s.bg} flex items-center justify-center`}>
-                <div className="text-center">
+            <article key={s.company} className="rounded-2xl bg-white border border-gray-200 overflow-hidden lift">
+              <div className={`relative aspect-[16/8] bg-gradient-to-br ${s.bg} flex items-center justify-center overflow-hidden`}>
+                {/* Decorative pattern overlay */}
+                <div aria-hidden className="absolute inset-0 bg-dot-grid opacity-30" />
+                <div aria-hidden className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-white/30 blur-2xl" />
+                <div className="relative text-center">
                   <div className="text-4xl font-bold text-gray-900">{s.company}</div>
-                  <div className="mt-2 text-sm text-gray-600">{s.industry} · {s.location}</div>
-                  <div className="text-sm text-gray-600">{s.size}</div>
+                  <div className="mt-2 text-sm text-gray-700 flex items-center justify-center gap-1.5">
+                    <Icon.Map className="h-3 w-3" /> {s.industry} · {s.location}
+                  </div>
+                  <div className="text-sm text-gray-700">{s.size}</div>
                 </div>
               </div>
               <div className="p-8">
@@ -99,7 +111,7 @@ export default function CustomersPage() {
                 <div className="mt-8 pt-6 border-t border-gray-100 grid grid-cols-3 gap-4">
                   {s.metrics.map(([n, l]) => (
                     <div key={l}>
-                      <div className="text-2xl font-bold text-blue-600">{n}</div>
+                      <div className="text-2xl font-bold gradient-text"><AnimatedCounter value={n} /></div>
                       <div className="text-xs text-gray-500 mt-1">{l}</div>
                     </div>
                   ))}

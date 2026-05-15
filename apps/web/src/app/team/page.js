@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import { Section, Eyebrow, H2, Lead } from '@/components/marketing/Section';
+import { AmbientBlobs, DotGrid, FloatingShapes } from '@/components/marketing/decorations';
+import { Icon } from '@/components/marketing/icons';
 
 export const metadata = {
   title: 'Team — ServiceHub',
@@ -68,17 +70,21 @@ export default function TeamPage() {
   return (
     <MarketingLayout>
       {/* HERO */}
-      <Section>
-        <div className="max-w-3xl">
-          <Eyebrow>Team</Eyebrow>
-          <H2>The people behind ServiceHub</H2>
-          <Lead>
-            47 humans across Portland, Toronto, and remotely from a dozen countries.
-            Engineers, designers, support folks, and former service-business operators.
-            We&apos;re building software for people we know.
-          </Lead>
-        </div>
-      </Section>
+      <section className="relative bg-white overflow-hidden">
+        <AmbientBlobs />
+        <FloatingShapes />
+        <Section>
+          <div className="max-w-3xl">
+            <Eyebrow>Team</Eyebrow>
+            <H2>The people behind ServiceHub</H2>
+            <Lead>
+              47 humans across Portland, Toronto, and remotely from a dozen countries.
+              Engineers, designers, support folks, and former service-business operators.
+              We&apos;re building software for people we know.
+            </Lead>
+          </div>
+        </Section>
+      </section>
 
       {/* LEADERSHIP */}
       <Section bg="gray">
@@ -88,12 +94,18 @@ export default function TeamPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {LEADERSHIP.map((m) => (
-            <div key={m.name} className="rounded-xl border border-gray-200 bg-white p-8">
-              <Avatar avatar={m.avatar} gradient={m.gradient} size="lg" />
-              <h3 className="mt-6 text-xl font-bold text-gray-900">{m.name}</h3>
-              <p className="text-sm text-blue-600 font-medium">{m.role}</p>
-              <p className="text-xs text-gray-500 mt-1">{m.location}</p>
-              <p className="mt-4 text-sm text-gray-600 leading-relaxed">{m.bio}</p>
+            <div key={m.name} className="group relative rounded-xl border border-gray-200 bg-white p-8 lift overflow-hidden">
+              {/* Decorative gradient burst */}
+              <div aria-hidden className={`absolute -top-12 -right-12 h-32 w-32 rounded-full bg-gradient-to-br ${m.gradient} opacity-10 group-hover:opacity-20 blur-2xl transition-opacity`} />
+              <div className="relative">
+                <Avatar avatar={m.avatar} gradient={m.gradient} size="lg" />
+                <h3 className="mt-6 text-xl font-bold text-gray-900">{m.name}</h3>
+                <p className="text-sm text-blue-600 font-medium">{m.role}</p>
+                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                  <Icon.Map className="h-3 w-3" /> {m.location}
+                </p>
+                <p className="mt-4 text-sm text-gray-600 leading-relaxed">{m.bio}</p>
+              </div>
             </div>
           ))}
         </div>
@@ -107,9 +119,12 @@ export default function TeamPage() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {TEAM.map((m) => (
-            <div key={m.name} className="text-center">
+            <div key={m.name} className="group text-center rounded-xl p-4 lift hover:bg-gray-50/50">
               <div className="flex justify-center">
-                <Avatar avatar={m.avatar} gradient={m.gradient} size="md" />
+                <div className="relative">
+                  <div aria-hidden className={`absolute inset-0 rounded-full bg-gradient-to-br ${m.gradient} opacity-0 group-hover:opacity-40 blur-xl transition-opacity`} />
+                  <Avatar avatar={m.avatar} gradient={m.gradient} size="md" />
+                </div>
               </div>
               <h3 className="mt-4 text-sm font-semibold text-gray-900">{m.name}</h3>
               <p className="text-xs text-gray-500">{m.role}</p>

@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import MarketingLayout from '@/components/marketing/MarketingLayout';
 import { Section, Eyebrow, H2, Lead } from '@/components/marketing/Section';
+import { AmbientBlobs, DotGrid, FloatingShapes } from '@/components/marketing/decorations';
+import AnimatedCounter from '@/components/marketing/AnimatedCounter';
+import { Icon } from '@/components/marketing/icons';
 
 export const metadata = {
   title: 'About — ServiceHub',
@@ -53,17 +56,21 @@ export default function AboutPage() {
   return (
     <MarketingLayout>
       {/* HERO */}
-      <Section>
-        <div className="max-w-3xl">
-          <Eyebrow>About us</Eyebrow>
-          <H2>We&apos;re building the tools we wish we&apos;d had.</H2>
-          <Lead>
-            ServiceHub was started in 2021 by three engineers who watched a family plumbing business
-            run on paper, sticky notes, and a 12-year-old Access database. We figured: surely there&apos;s
-            something better. There wasn&apos;t. So we built it.
-          </Lead>
-        </div>
-      </Section>
+      <section className="relative bg-white overflow-hidden">
+        <AmbientBlobs />
+        <FloatingShapes />
+        <Section>
+          <div className="max-w-3xl">
+            <Eyebrow>About us</Eyebrow>
+            <H2>We&apos;re building the tools we wish we&apos;d had.</H2>
+            <Lead>
+              ServiceHub was started in 2021 by three engineers who watched a family plumbing business
+              run on paper, sticky notes, and a 12-year-old Access database. We figured: surely there&apos;s
+              something better. There wasn&apos;t. So we built it.
+            </Lead>
+          </div>
+        </Section>
+      </section>
 
       {/* MISSION */}
       <Section bg="gray">
@@ -99,30 +106,47 @@ export default function AboutPage() {
           <Lead>These aren&apos;t poster slogans. They&apos;re what we use to make decisions when no one is looking.</Lead>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {VALUES.map((v) => (
-            <div key={v.title} className="rounded-xl border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-2">{v.title}</h3>
-              <p className="text-gray-600">{v.desc}</p>
+          {VALUES.map((v, i) => (
+            <div key={v.title} className="group relative rounded-xl border border-gray-200 p-6 lift overflow-hidden">
+              <div aria-hidden className="absolute top-0 right-0 text-7xl font-bold text-gray-50 group-hover:text-blue-50 transition-colors leading-none -mr-2 -mt-2 select-none">{(i + 1).toString().padStart(2, '0')}</div>
+              <div className="relative">
+                <h3 className="font-semibold text-gray-900 mb-2">{v.title}</h3>
+                <p className="text-gray-600">{v.desc}</p>
+              </div>
             </div>
           ))}
         </div>
       </Section>
 
       {/* TIMELINE */}
-      <Section bg="gray">
-        <div className="max-w-3xl mb-12">
-          <Eyebrow>Our story</Eyebrow>
-          <H2>Where we&apos;ve been</H2>
-        </div>
-        <div className="space-y-8">
-          {TIMELINE.map(([year, desc]) => (
-            <div key={year} className="flex gap-6 md:gap-12">
-              <div className="text-3xl md:text-4xl font-bold text-blue-600 w-20 md:w-32 flex-shrink-0">{year}</div>
-              <p className="text-gray-700 leading-relaxed pt-1">{desc}</p>
+      <section className="relative bg-gray-50 overflow-hidden">
+        <DotGrid className="opacity-40" />
+        <div className="max-w-7xl mx-auto px-6 py-20 md:py-24">
+          <div className="max-w-3xl mb-12">
+            <Eyebrow>Our story</Eyebrow>
+            <H2>Where we&apos;ve been</H2>
+          </div>
+          <div className="relative max-w-3xl">
+            {/* Connecting line */}
+            <div aria-hidden className="absolute left-[5.5rem] md:left-[8.5rem] top-2 bottom-2 w-px bg-gradient-to-b from-blue-500 via-cyan-400 to-blue-200" />
+
+            <div className="space-y-12">
+              {TIMELINE.map(([year, desc], i) => (
+                <div key={year} className="relative flex gap-6 md:gap-12 group">
+                  <div className="w-20 md:w-32 flex-shrink-0 text-right">
+                    <span className="text-3xl md:text-4xl font-bold gradient-text">{year}</span>
+                  </div>
+                  <div className="relative flex-1">
+                    {/* Node dot */}
+                    <span aria-hidden className="absolute -left-[1.5rem] md:-left-[1.55rem] top-2 h-4 w-4 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 ring-4 ring-gray-50 shadow group-hover:scale-125 transition-transform" />
+                    <p className="text-gray-700 leading-relaxed">{desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
-      </Section>
+      </section>
 
       {/* FACTS */}
       <Section>
@@ -132,8 +156,8 @@ export default function AboutPage() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {FACTS.map(([n, l]) => (
-            <div key={l}>
-              <div className="text-5xl font-bold gradient-text">{n}</div>
+            <div key={l} className="rounded-xl border border-gray-200 p-6 lift">
+              <div className="text-5xl font-bold gradient-text"><AnimatedCounter value={n} /></div>
               <div className="mt-2 text-sm text-gray-600">{l}</div>
             </div>
           ))}
