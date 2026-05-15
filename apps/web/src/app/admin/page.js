@@ -1,190 +1,161 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Icon } from '@/components/marketing/icons';
+import AdminShell, { StatCard } from '@/components/admin/AdminShell';
+import MiniChart from '@/components/admin/MiniChart';
 import AnimatedCounter from '@/components/marketing/AnimatedCounter';
+import { Icon } from '@/components/marketing/icons';
+import { adminFetch } from '@/lib/admin-api';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3000';
-
-function getAdminToken() {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('hs_admin_token');
-}
-
-async function adminFetch(path, opts = {}) {
-  const token = getAdminToken();
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...opts,
-    headers: { Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-  return data;
-}
-
-export default function AdminDashboard() {
-  const router = useRouter();
+export default function AdminOverview() {
   const [stats, setStats] = useState(null);
-  const [tenants, setTenants] = useState([]);
-  const [user, setUser] = useState(null);
+  const [charts, setCharts] = useState(null);
+  const [recentTenants, setRecentTenants] = useState([]);
+  const [recentAudit, setRecentAudit] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!getAdminToken()) { router.push('/admin/login'); return; }
-    setUser(JSON.parse(localStorage.getItem('hs_admin_user') || 'null'));
     Promise.all([
       adminFetch('/api/v1/admin/stats'),
-      adminFetch('/api/v1/admin/tenants'),
-    ]).then(([s, t]) => {
+      adminFetch('/api/v1/admin/charts/timeseries?days=30'),
+      adminFetch('/api/v1/admin/tenants?limit=5'),
+      adminFetch('/api/v1/admin/audit-logs?limit=10'),
+    ]).then(([s, c, t, a]) => {
       setStats(s);
-      setTenants(t.data);
-    }).catch((e) => {
-      setError(e.message);
-      if (/invalid token|missing bearer/i.test(e.message)) router.push('/admin/login');
-    });
-  }, [router]);
+      setCharts(c);
+      setRecentTenants(t.data);
+      setRecentAudit(a.data);
+    }).catch((e) => setError(e.message));
+  }, []);
 
-  function logout() {
-    localStorage.removeItem('hs_admin_token');
-    localStorage.removeItem('hs_admin_user');
-    router.push('/admin/login');
-  }
-
-  async function toggleActive(tenantId, currentActive) {
-    try {
-      await adminFetch(`/api/v1/admin/tenants/${tenantId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !currentActive }),
-      });
-      setTenants((prev) => prev.map((t) => t.tenant_id === tenantId ? { ...t, is_active: !currentActive } : t));
-    } catch (e) { setError(e.message); }
-  }
+  const planTotal = stats?.plan_mix?.reduce((s, r) => s + r.n, 0) || 1;
+  const signupsTotal = charts?.signups?.reduce((s, d) => s + d.n, 0) || 0;
+  const bookingsTotal = charts?.bookings?.reduce((s, d) => s + d.n, 0) || 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-gray-900 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="h-9 w-9 rounded-md bg-gradient-to-br from-blue-500 to-cyan-400" />
+    <AdminShell title="Overview" subtitle="Live state of the ServiceHub platform.">
+      {error && (
+        <div className="mb-6 rounded-md bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">{error}</div>
+      )}
+
+      {/* Stat tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <StatCard label="Tenants" value={<AnimatedCounter value={String(stats?.tenants ?? 0)} />} gradient="from-blue-500 to-cyan-500" Ico={Icon.Globe} hint="active businesses" />
+        <StatCard label="Users" value={<AnimatedCounter value={String(stats?.users ?? 0)} />} gradient="from-violet-500 to-purple-500" Ico={Icon.Shield} hint="across all tenants" />
+        <StatCard label="Bookings" value={<AnimatedCounter value={String(stats?.bookings ?? 0)} />} gradient="from-emerald-500 to-teal-500" Ico={Icon.Calendar} hint="lifetime" />
+        <StatCard label="Services" value={<AnimatedCounter value={String(stats?.services ?? 0)} />} gradient="from-amber-500 to-orange-500" Ico={Icon.Bolt} hint="configured" />
+      </div>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="flex items-center justify-between mb-1">
             <div>
-              <div className="font-semibold">ServiceHub <span className="text-cyan-400">Admin</span></div>
-              <div className="text-xs text-gray-400">Platform operator console</div>
+              <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Tenant signups</div>
+              <div className="text-2xl font-bold mt-0.5">{signupsTotal}</div>
+              <div className="text-xs text-gray-500">last 30 days</div>
+            </div>
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex items-center justify-center">
+              <Icon.Globe className="h-4 w-4" />
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-300 hidden sm:inline">{user?.email}</span>
-            <button onClick={logout} className="rounded-md bg-gray-800 hover:bg-gray-700 text-sm px-3 py-1.5">Sign out</button>
+          <div className="mt-4">
+            <MiniChart data={charts?.signups || []} color="#2563eb" height={100} showAxis />
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        {error && (
-          <div className="mb-6 rounded-md bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">{error}</div>
-        )}
-
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Platform overview</h1>
-        <p className="text-gray-600 mb-8">Live state across every tenant on ServiceHub.</p>
-
-        {/* Stat tiles */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-          {[
-            ['Tenants', stats?.tenants ?? 0, 'from-blue-500 to-cyan-500'],
-            ['Users', stats?.users ?? 0, 'from-violet-500 to-purple-500'],
-            ['Bookings', stats?.bookings ?? 0, 'from-emerald-500 to-teal-500'],
-            ['Services', stats?.services ?? 0, 'from-amber-500 to-orange-500'],
-          ].map(([label, value, grad]) => (
-            <div key={label} className="relative rounded-xl border border-gray-200 bg-white p-6 overflow-hidden">
-              <div aria-hidden className={`absolute -top-12 -right-12 h-24 w-24 rounded-full bg-gradient-to-br ${grad} opacity-20 blur-2xl`} />
-              <div className="relative">
-                <div className="text-sm text-gray-500">{label}</div>
-                <div className="text-3xl font-bold gradient-text mt-1"><AnimatedCounter value={String(value)} /></div>
-              </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">Bookings</div>
+              <div className="text-2xl font-bold mt-0.5">{bookingsTotal}</div>
+              <div className="text-xs text-gray-500">last 30 days</div>
             </div>
-          ))}
+            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white flex items-center justify-center">
+              <Icon.Calendar className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <MiniChart data={charts?.bookings || []} color="#10b981" height={100} showAxis />
+          </div>
         </div>
+      </div>
 
-        {/* Plan mix + Tenant list */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 rounded-xl border border-gray-200 bg-white p-6">
-            <h2 className="font-semibold text-gray-900 mb-4">Plan distribution</h2>
-            <div className="space-y-3">
-              {stats?.plan_mix?.length ? stats.plan_mix.map((p) => {
-                const total = stats.plan_mix.reduce((s, r) => s + r.n, 0) || 1;
-                const pct = Math.round((p.n / total) * 100);
-                return (
-                  <div key={p.plan_tier}>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="font-medium text-gray-900 capitalize">{p.plan_tier}</span>
-                      <span className="text-gray-500">{p.n} · {pct}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${pct}%` }} />
-                    </div>
+      {/* Plan distribution + recent tenants */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <h2 className="font-semibold mb-4">Plan distribution</h2>
+          <div className="space-y-3">
+            {stats?.plan_mix?.length ? stats.plan_mix.map((p) => {
+              const pct = Math.round((p.n / planTotal) * 100);
+              return (
+                <div key={p.plan_tier}>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="font-medium capitalize">{p.plan_tier}</span>
+                    <span className="text-gray-500">{p.n} · {pct}%</span>
                   </div>
-                );
-              }) : <p className="text-sm text-gray-500">No active tenants yet.</p>}
-            </div>
-          </div>
-
-          <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">All tenants</h2>
-              <span className="text-xs text-gray-500">{tenants.length} shown</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs uppercase tracking-wider text-gray-500 border-b border-gray-100">
-                    <th className="px-6 py-3">Business</th>
-                    <th className="px-6 py-3">Plan</th>
-                    <th className="px-6 py-3 text-right">Users</th>
-                    <th className="px-6 py-3 text-right">Bookings</th>
-                    <th className="px-6 py-3">Status</th>
-                    <th className="px-6 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {tenants.map((t) => (
-                    <tr key={t.tenant_id} className="hover:bg-gray-50">
-                      <td className="px-6 py-3">
-                        <div className="font-medium text-gray-900">{t.business_name}</div>
-                        <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                          <Icon.Globe className="h-3 w-3" />
-                          {t.subdomain}.servicehub.app
-                          {t.onboarded === 'true' && (
-                            <span className="ml-2 text-emerald-600 text-xs">✓ onboarded</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-3"><span className="text-xs rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 font-medium capitalize">{t.plan_tier}</span></td>
-                      <td className="px-6 py-3 text-right font-mono">{t.user_count}</td>
-                      <td className="px-6 py-3 text-right font-mono">{t.booking_count}</td>
-                      <td className="px-6 py-3">
-                        <span className={`inline-flex items-center gap-1.5 text-xs ${t.is_active ? 'text-emerald-700' : 'text-gray-500'}`}>
-                          <span className={`h-2 w-2 rounded-full ${t.is_active ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                          {t.is_active ? 'Active' : 'Suspended'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3 text-right">
-                        <button onClick={() => toggleActive(t.tenant_id, t.is_active)} className="text-xs text-blue-600 hover:underline">
-                          {t.is_active ? 'Suspend' : 'Reactivate'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {tenants.length === 0 && (
-                    <tr><td colSpan="6" className="px-6 py-10 text-center text-sm text-gray-500">No tenants yet.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            }) : <p className="text-sm text-gray-500">No active tenants.</p>}
           </div>
         </div>
-      </main>
-    </div>
+
+        <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="font-semibold">Recent tenants</h2>
+            <Link href="/admin/tenants" className="text-xs text-blue-600 hover:underline">View all →</Link>
+          </div>
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-gray-100">
+              {recentTenants.map((t) => (
+                <tr key={t.tenant_id} className="hover:bg-gray-50">
+                  <td className="px-6 py-3">
+                    <Link href={`/admin/tenants/${t.tenant_id}`} className="font-medium text-gray-900 hover:text-blue-600">{t.business_name}</Link>
+                    <div className="text-xs text-gray-500">{t.subdomain}.servicehub.app</div>
+                  </td>
+                  <td className="px-6 py-3"><span className="text-xs rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 font-medium capitalize">{t.plan_tier}</span></td>
+                  <td className="px-6 py-3 text-right text-xs text-gray-500">{new Date(t.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+              {recentTenants.length === 0 && (
+                <tr><td className="px-6 py-8 text-center text-sm text-gray-500">No tenants yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Recent activity */}
+      <div className="rounded-xl border border-gray-200 bg-white">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="font-semibold">Recent activity</h2>
+          <Link href="/admin/audit-logs" className="text-xs text-blue-600 hover:underline">View all →</Link>
+        </div>
+        {recentAudit.length === 0 ? (
+          <p className="px-6 py-10 text-center text-sm text-gray-500">No recent activity yet.</p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {recentAudit.map((a) => (
+              <li key={a.id} className="px-6 py-3 flex items-center justify-between text-sm">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 font-bold ${
+                    a.action === 'CREATE' ? 'bg-emerald-100 text-emerald-700' :
+                    a.action === 'UPDATE' ? 'bg-blue-100 text-blue-700' :
+                    a.action === 'DELETE' ? 'bg-rose-100 text-rose-700' : 'bg-gray-100 text-gray-700'
+                  }`}>{a.action}</span>
+                  <span className="font-medium truncate">{a.entity_type}</span>
+                  <span className="text-gray-500 truncate">by {a.actor_email || a.actor_id?.slice(0, 8) || 'system'}</span>
+                  <span className="text-gray-400 truncate">on {a.subdomain}</span>
+                </div>
+                <span className="text-xs text-gray-400 flex-shrink-0">{new Date(a.created_at).toLocaleString()}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </AdminShell>
   );
 }
