@@ -6,14 +6,27 @@ import { Icon } from '@/components/marketing/icons';
 import { getAdminToken, getAdminUser, clearAdminSession } from '@/lib/admin-api';
 
 const NAV = [
-  { href: '/admin',                 label: 'Overview',       Ico: Icon.Chart },
-  { href: '/admin/tenants',         label: 'Tenants',        Ico: Icon.Globe },
-  { href: '/admin/users',           label: 'Users',          Ico: Icon.Shield },
-  { href: '/admin/bookings',        label: 'Bookings',       Ico: Icon.Calendar },
-  { href: '/admin/plans',           label: 'Plans',          Ico: Icon.Dollar },
-  { href: '/admin/feature-flags',   label: 'Feature flags',  Ico: Icon.Bolt },
-  { href: '/admin/audit-logs',      label: 'Audit logs',     Ico: Icon.Newspaper },
-  { href: '/admin/settings',        label: 'Settings',       Ico: Icon.Lock },
+  { type: 'item',  href: '/admin',                       label: 'Overview',         Ico: Icon.Chart },
+  { type: 'group', label: 'Platform' },
+  { type: 'item',  href: '/admin/tenants',               label: 'Tenants',          Ico: Icon.Globe },
+  { type: 'item',  href: '/admin/users',                 label: 'Users',            Ico: Icon.Shield },
+  { type: 'item',  href: '/admin/bookings',              label: 'Bookings',         Ico: Icon.Calendar },
+  { type: 'item',  href: '/admin/system-health',         label: 'System health',    Ico: Icon.Bolt },
+  { type: 'item',  href: '/admin/announcements',         label: 'Announcements',    Ico: Icon.MessageCircle },
+  { type: 'item',  href: '/admin/email-templates',       label: 'Email templates',  Ico: Icon.Mail },
+  { type: 'item',  href: '/admin/themes',                label: 'Themes',           Ico: Icon.Palette },
+  { type: 'item',  href: '/admin/api-keys',              label: 'API keys',         Ico: Icon.Code },
+  { type: 'item',  href: '/admin/webhooks',              label: 'Webhooks',         Ico: Icon.Zap },
+  { type: 'group', label: 'Content' },
+  { type: 'item',  href: '/admin/blog',                  label: 'Blog',             Ico: Icon.Newspaper },
+  { type: 'item',  href: '/admin/changelog',             label: 'Changelog',        Ico: Icon.Layers },
+  { type: 'item',  href: '/admin/category-templates',    label: 'Category library', Ico: Icon.Layers },
+  { type: 'item',  href: '/admin/service-templates',     label: 'Service library',  Ico: Icon.Bolt },
+  { type: 'group', label: 'Configuration' },
+  { type: 'item',  href: '/admin/plans',                 label: 'Plans',            Ico: Icon.Dollar },
+  { type: 'item',  href: '/admin/feature-flags',         label: 'Feature flags',    Ico: Icon.Bolt },
+  { type: 'item',  href: '/admin/audit-logs',            label: 'Audit logs',       Ico: Icon.Newspaper },
+  { type: 'item',  href: '/admin/settings',              label: 'Settings',         Ico: Icon.Lock },
 ];
 
 /**
@@ -63,8 +76,15 @@ export default function AdminShell({ title, subtitle, actions, children }) {
         </Link>
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-          {NAV.map((item) => {
-            const active = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
+          {NAV.map((item, idx) => {
+            if (item.type === 'group') {
+              return (
+                <div key={`g-${idx}`} className="px-3 pt-4 pb-1 text-[10px] uppercase tracking-wider font-bold text-gray-500">
+                  {item.label}
+                </div>
+              );
+            }
+            const active = item.href === '/admin' ? pathname === '/admin' : pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link
                 key={item.href}
@@ -113,8 +133,11 @@ export default function AdminShell({ title, subtitle, actions, children }) {
         </div>
         {navOpen && (
           <nav className="border-t border-gray-800 p-3 space-y-0.5">
-            {NAV.map((item) => {
-              const active = item.href === '/admin' ? pathname === '/admin' : pathname.startsWith(item.href);
+            {NAV.map((item, idx) => {
+              if (item.type === 'group') {
+                return <div key={`g-${idx}`} className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider font-bold text-gray-500">{item.label}</div>;
+              }
+              const active = item.href === '/admin' ? pathname === '/admin' : pathname === item.href || pathname.startsWith(item.href + '/');
               return (
                 <Link
                   key={item.href} href={item.href} onClick={() => setNavOpen(false)}
