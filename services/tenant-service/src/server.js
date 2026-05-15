@@ -18,6 +18,7 @@ const uploadsRoutes = require('./routes/uploads');
 const adminRoutes = require('./routes/admin');
 const adminPlatformRoutes = require('./routes/admin-platform');
 const adminRevenueRoutes = require('./routes/admin-revenue');
+const adminTenantDetailRoutes = require('./routes/admin-tenant-detail');
 const publicRoutes = require('./routes/public');
 
 const app = Fastify({ loggerInstance: logger });
@@ -42,6 +43,7 @@ async function start() {
   app.register(adminRoutes, { prefix: '/api/v1/admin' });
   app.register(adminPlatformRoutes, { prefix: '/api/v1/admin' });
   app.register(adminRevenueRoutes, { prefix: '/api/v1/admin' });
+  app.register(adminTenantDetailRoutes, { prefix: '/api/v1/admin' });
   app.register(publicRoutes, { prefix: '/api/v1/public' });
 
   const port = parseInt(process.env.TENANT_SERVICE_PORT || '3001', 10);

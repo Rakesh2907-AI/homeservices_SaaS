@@ -42,25 +42,29 @@ export default function PageHeader({ eyebrow, title, description, breadcrumbs, a
       {tabs?.length > 0 && (
         <div className="px-6 lg:px-10 -mt-px overflow-x-auto">
           <div className="flex items-center gap-0">
-            {tabs.map((t) => (
-              <Link
-                key={t.href}
-                href={t.href}
-                className={`relative px-3 py-3 text-[13px] font-medium whitespace-nowrap transition-colors ${
-                  t.active ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                <span className="flex items-center gap-1.5">
-                  {t.label}
-                  {t.count != null && (
-                    <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-semibold mono-num ${t.active ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {t.count}
-                    </span>
-                  )}
-                </span>
-                {t.active && <span aria-hidden className="absolute left-3 right-3 -bottom-px h-0.5 rounded-full" style={{ background: 'var(--accent)' }} />}
-              </Link>
-            ))}
+            {tabs.map((t, i) => {
+              const className = `relative px-3 py-3 text-[13px] font-medium whitespace-nowrap transition-colors ${
+                t.active ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
+              }`;
+              const inner = (
+                <>
+                  <span className="flex items-center gap-1.5">
+                    {t.label}
+                    {t.count != null && (
+                      <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-semibold mono-num ${t.active ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {t.count}
+                      </span>
+                    )}
+                  </span>
+                  {t.active && <span aria-hidden className="absolute left-3 right-3 -bottom-px h-0.5 rounded-full" style={{ background: 'var(--accent)' }} />}
+                </>
+              );
+              // In-page tabs with onClick render as buttons; navigation tabs render as links.
+              if (t.onClick) {
+                return <button key={i} type="button" onClick={t.onClick} className={className}>{inner}</button>;
+              }
+              return <Link key={t.href || i} href={t.href} className={className}>{inner}</Link>;
+            })}
           </div>
         </div>
       )}
