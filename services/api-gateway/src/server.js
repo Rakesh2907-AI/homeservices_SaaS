@@ -40,7 +40,9 @@ async function start() {
   app.addHook('onRequest', async (req, reply) => {
     if (req.url === '/health'
         || req.url.startsWith('/api/v1/tenants/signup')
-        || req.url.startsWith('/api/v1/onboarding/presets')) return;
+        || req.url.startsWith('/api/v1/onboarding/presets')
+        || req.url.startsWith('/api/v1/auth/admin-login')
+        || req.url.startsWith('/api/v1/admin')) return;
 
     // Resolution order: explicit slug header > forwarded host > Host header.
     const slug = req.headers['x-tenant-slug'];
@@ -79,9 +81,11 @@ async function start() {
     '/health',
     '/api/v1/auth/login',
     '/api/v1/auth/refresh',
+    '/api/v1/auth/admin-login',
     '/api/v1/tenants/signup',
     '/api/v1/tenants/resolve',
     '/api/v1/onboarding/presets',
+    '/api/v1/admin', // admin routes do their own auth (super_admin check)
   ];
   app.addHook('preHandler', async (req, reply) => {
     if (PUBLIC.some((p) => req.url.startsWith(p))) return;
@@ -110,6 +114,7 @@ async function start() {
   await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/themes', rewritePrefix: '/api/v1/themes' });
   await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/onboarding', rewritePrefix: '/api/v1/onboarding' });
   await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/uploads', rewritePrefix: '/api/v1/uploads' });
+  await app.register(proxy, { upstream: TENANT_SVC, prefix: '/api/v1/admin', rewritePrefix: '/api/v1/admin' });
   await app.register(proxy, { upstream: AUTH_SVC, prefix: '/api/v1/auth', rewritePrefix: '/api/v1/auth' });
   await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/bookings', rewritePrefix: '/api/v1/bookings' });
   await app.register(proxy, { upstream: BOOKING_SVC, prefix: '/api/v1/customers', rewritePrefix: '/api/v1/customers' });

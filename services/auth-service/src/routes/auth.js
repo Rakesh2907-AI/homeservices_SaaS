@@ -28,6 +28,43 @@ async function resolveTenantId(req) {
 }
 
 module.exports = async function (app) {
+  // ===== Super admin login — no tenant context required =====
+  app.post('/admin-login', async (req, reply) => {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      reply.code(400);
+      return { error: 'invalid input', details: parsed.error.flatten() };
+    }
+    const { email, password } = parsed.data;
+
+    const user = await db.withSuperAdmin(async (client) => {
+      const { rows } = await client.query(
+        `SELECT id, tenant_id, email, password_hash, role, full_name, is_active
+         FROM users WHERE email = $1 AND role = 'super_admin' LIMIT 1`,
+        [email]
+      );
+      return rows[0];
+    });
+
+    if (!user || !user.is_active || !bcrypt.compareSync(password, user.password_hash)) {
+      reply.code(401);
+      return { error: 'invalid credentials' };
+    }
+
+    const accessToken = jwtUtil.signAccess({
+      sub: user.id,
+      tenantId: user.tenant_id,
+      email: user.email,
+      role: user.role,
+      isSuperAdmin: true,
+    });
+
+    return {
+      accessToken,
+      user: { id: user.id, email: user.email, role: user.role, full_name: user.full_name },
+    };
+  });
+
   app.post('/login', async (req, reply) => {
     const tenantId = await resolveTenantId(req);
     if (!tenantId) {

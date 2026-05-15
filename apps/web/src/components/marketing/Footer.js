@@ -83,7 +83,20 @@ export default function Footer() {
 
         <div className="mt-12 pt-8 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-500">© {new Date().getFullYear()} ServiceHub Inc. All rights reserved.</p>
-          <p className="text-sm text-gray-500">Made with care in Portland, OR.</p>
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-gray-500">Made with care in Portland, OR.</p>
+            <Link
+              href="/admin/login"
+              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-gray-900 hover:text-gray-900 transition"
+              title="Platform operator login"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4"/>
+              </svg>
+              Admin login
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

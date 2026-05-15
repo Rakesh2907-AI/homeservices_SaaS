@@ -14,6 +14,7 @@ const themesRoutes = require('./routes/themes');
 const healthRoutes = require('./routes/health');
 const onboardingRoutes = require('./routes/onboarding');
 const uploadsRoutes = require('./routes/uploads');
+const adminRoutes = require('./routes/admin');
 
 const app = Fastify({ loggerInstance: logger });
 
@@ -33,6 +34,7 @@ async function start() {
   app.register(themesRoutes, { prefix: '/api/v1/themes' });
   app.register(onboardingRoutes, { prefix: '/api/v1/onboarding' });
   app.register(uploadsRoutes, { prefix: '/api/v1/uploads' });
+  app.register(adminRoutes, { prefix: '/api/v1/admin' });
 
   const port = parseInt(process.env.TENANT_SERVICE_PORT || '3001', 10);
   await app.listen({ port, host: '0.0.0.0' });
