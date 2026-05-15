@@ -3,30 +3,38 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Icon } from '@/components/marketing/icons';
-import { getAdminToken, getAdminUser, clearAdminSession } from '@/lib/admin-api';
+import { getAdminToken, getAdminUser, clearAdminSession, adminFetch } from '@/lib/admin-api';
 
 const NAV = [
-  { type: 'item',  href: '/admin',                       label: 'Overview',         Ico: Icon.Chart },
+  { type: 'item',  href: '/admin',                       label: 'Overview',          Ico: Icon.Chart },
+  { type: 'item',  href: '/admin/notifications',         label: 'Inbox',             Ico: Icon.MessageCircle, badge: 'unread' },
+  { type: 'group', label: 'Tenants & Users' },
+  { type: 'item',  href: '/admin/tenants',               label: 'Tenants',           Ico: Icon.Globe },
+  { type: 'item',  href: '/admin/users',                 label: 'Users',             Ico: Icon.Shield },
+  { type: 'item',  href: '/admin/bookings',              label: 'Bookings',          Ico: Icon.Calendar },
+  { type: 'group', label: 'Revenue & Billing' },
+  { type: 'item',  href: '/admin/revenue',               label: 'Revenue',           Ico: Icon.Chart },
+  { type: 'item',  href: '/admin/subscriptions',         label: 'Subscriptions',     Ico: Icon.Dollar },
+  { type: 'item',  href: '/admin/invoices',              label: 'Invoices',          Ico: Icon.Newspaper },
+  { type: 'item',  href: '/admin/taxes',                 label: 'Tax rates',         Ico: Icon.Layers },
+  { type: 'item',  href: '/admin/discounts',             label: 'Discounts',         Ico: Icon.Star },
+  { type: 'item',  href: '/admin/plans',                 label: 'Plans',             Ico: Icon.Dollar },
   { type: 'group', label: 'Platform' },
-  { type: 'item',  href: '/admin/tenants',               label: 'Tenants',          Ico: Icon.Globe },
-  { type: 'item',  href: '/admin/users',                 label: 'Users',            Ico: Icon.Shield },
-  { type: 'item',  href: '/admin/bookings',              label: 'Bookings',         Ico: Icon.Calendar },
-  { type: 'item',  href: '/admin/system-health',         label: 'System health',    Ico: Icon.Bolt },
-  { type: 'item',  href: '/admin/announcements',         label: 'Announcements',    Ico: Icon.MessageCircle },
-  { type: 'item',  href: '/admin/email-templates',       label: 'Email templates',  Ico: Icon.Mail },
-  { type: 'item',  href: '/admin/themes',                label: 'Themes',           Ico: Icon.Palette },
-  { type: 'item',  href: '/admin/api-keys',              label: 'API keys',         Ico: Icon.Code },
-  { type: 'item',  href: '/admin/webhooks',              label: 'Webhooks',         Ico: Icon.Zap },
+  { type: 'item',  href: '/admin/system-health',         label: 'System health',     Ico: Icon.Bolt },
+  { type: 'item',  href: '/admin/announcements',         label: 'Announcements',     Ico: Icon.MessageCircle },
+  { type: 'item',  href: '/admin/email-templates',       label: 'Email templates',   Ico: Icon.Mail },
+  { type: 'item',  href: '/admin/themes',                label: 'Themes',            Ico: Icon.Palette },
+  { type: 'item',  href: '/admin/api-keys',              label: 'API keys',          Ico: Icon.Code },
+  { type: 'item',  href: '/admin/webhooks',              label: 'Webhooks',          Ico: Icon.Zap },
   { type: 'group', label: 'Content' },
-  { type: 'item',  href: '/admin/blog',                  label: 'Blog',             Ico: Icon.Newspaper },
-  { type: 'item',  href: '/admin/changelog',             label: 'Changelog',        Ico: Icon.Layers },
-  { type: 'item',  href: '/admin/category-templates',    label: 'Category library', Ico: Icon.Layers },
-  { type: 'item',  href: '/admin/service-templates',     label: 'Service library',  Ico: Icon.Bolt },
+  { type: 'item',  href: '/admin/blog',                  label: 'Blog',              Ico: Icon.Newspaper },
+  { type: 'item',  href: '/admin/changelog',             label: 'Changelog',         Ico: Icon.Layers },
+  { type: 'item',  href: '/admin/category-templates',    label: 'Category library',  Ico: Icon.Layers },
+  { type: 'item',  href: '/admin/service-templates',     label: 'Service library',   Ico: Icon.Bolt },
   { type: 'group', label: 'Configuration' },
-  { type: 'item',  href: '/admin/plans',                 label: 'Plans',            Ico: Icon.Dollar },
-  { type: 'item',  href: '/admin/feature-flags',         label: 'Feature flags',    Ico: Icon.Bolt },
-  { type: 'item',  href: '/admin/audit-logs',            label: 'Audit logs',       Ico: Icon.Newspaper },
-  { type: 'item',  href: '/admin/settings',              label: 'Settings',         Ico: Icon.Lock },
+  { type: 'item',  href: '/admin/feature-flags',         label: 'Feature flags',     Ico: Icon.Bolt },
+  { type: 'item',  href: '/admin/audit-logs',            label: 'Audit logs',        Ico: Icon.Newspaper },
+  { type: 'item',  href: '/admin/settings',              label: 'Settings',          Ico: Icon.Lock },
 ];
 
 /**
@@ -37,17 +45,20 @@ const NAV = [
  *     ...page content...
  *   </AdminShell>
  */
-export default function AdminShell({ title, subtitle, actions, children }) {
+export default function AdminShell({ title, subtitle, actions, header, children }) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
 
   useEffect(() => {
     if (!getAdminToken()) { router.push('/admin/login'); return; }
     setUser(getAdminUser());
     setReady(true);
+    // Fetch unread notification count for the sidebar badge.
+    adminFetch('/api/v1/admin/notifications/unread-count').then((r) => setUnread(r.count)).catch(() => {});
   }, [router]);
 
   function logout() {
@@ -85,18 +96,22 @@ export default function AdminShell({ title, subtitle, actions, children }) {
               );
             }
             const active = item.href === '/admin' ? pathname === '/admin' : pathname === item.href || pathname.startsWith(item.href + '/');
+            const badgeValue = item.badge === 'unread' ? unread : null;
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition ${
+                className={`group flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition ${
                   active
-                    ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/10 text-white border border-cyan-500/30'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
+                    ? 'bg-gradient-to-r from-blue-500/20 to-cyan-500/10 text-white border border-cyan-500/30 shadow-sm shadow-cyan-500/10'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/60 border border-transparent'
                 }`}
               >
-                <item.Ico className="h-4 w-4" />
-                {item.label}
+                <item.Ico className={`h-4 w-4 ${active ? 'text-cyan-300' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                <span className="flex-1">{item.label}</span>
+                {badgeValue > 0 && (
+                  <span className="rounded-full bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 leading-none">{badgeValue > 99 ? '99+' : badgeValue}</span>
+                )}
               </Link>
             );
           })}
@@ -138,13 +153,15 @@ export default function AdminShell({ title, subtitle, actions, children }) {
                 return <div key={`g-${idx}`} className="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider font-bold text-gray-500">{item.label}</div>;
               }
               const active = item.href === '/admin' ? pathname === '/admin' : pathname === item.href || pathname.startsWith(item.href + '/');
+              const badgeValue = item.badge === 'unread' ? unread : null;
               return (
                 <Link
                   key={item.href} href={item.href} onClick={() => setNavOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm ${active ? 'bg-cyan-500/20 text-white' : 'text-gray-300 hover:bg-gray-800'}`}
                 >
                   <item.Ico className="h-4 w-4" />
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {badgeValue > 0 && <span className="rounded-full bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5">{badgeValue}</span>}
                 </Link>
               );
             })}
@@ -155,13 +172,19 @@ export default function AdminShell({ title, subtitle, actions, children }) {
 
       {/* ===== Main content ===== */}
       <main className="lg:pl-64">
-        <header className="bg-white border-b border-gray-200 px-6 lg:px-10 py-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">{title}</h1>
-            {subtitle && <p className="text-sm text-gray-600 mt-1">{subtitle}</p>}
-          </div>
-          {actions && <div className="flex items-center gap-2">{actions}</div>}
-        </header>
+        {/* `header` prop lets pages use the full PageHeader. Falls back to the
+            legacy title/subtitle shape for pages that haven't migrated yet. */}
+        {header ? (
+          header
+        ) : (
+          <header className="bg-white border-b border-gray-200 px-6 lg:px-10 pt-8 pb-6 flex flex-wrap items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-bold tracking-tight text-gray-900">{title}</h1>
+              {subtitle && <p className="mt-2 text-base text-gray-600 max-w-3xl leading-relaxed">{subtitle}</p>}
+            </div>
+            {actions && <div className="flex items-center gap-2">{actions}</div>}
+          </header>
+        )}
 
         <div className="px-6 lg:px-10 py-8">{children}</div>
       </main>
