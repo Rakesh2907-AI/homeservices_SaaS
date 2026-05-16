@@ -11,9 +11,8 @@ import { getAdminToken, getAdminUser, clearAdminSession, adminFetch } from '@/li
 const NAV = [
   { type: 'item',  href: '/admin',                       label: 'Overview',         Ico: Icon.Chart },
   { type: 'item',  href: '/admin/notifications',         label: 'Inbox',            Ico: Icon.MessageCircle, badge: 'unread' },
-  { type: 'group', label: 'Tenants & Users' },
+  { type: 'group', label: 'Tenants' },
   { type: 'item',  href: '/admin/tenants',               label: 'Tenants',          Ico: Icon.Globe },
-  { type: 'item',  href: '/admin/users',                 label: 'Users',            Ico: Icon.Shield },
   { type: 'item',  href: '/admin/bookings',              label: 'Bookings',         Ico: Icon.Calendar },
   { type: 'group', label: 'Revenue & Billing' },
   { type: 'item',  href: '/admin/revenue',               label: 'Revenue',          Ico: Icon.Chart },

@@ -331,4 +331,216 @@ module.exports = async function (app) {
       return { data: rows };
     });
   });
+
+  // ===========================================================================
+  // PER-USER DRILLDOWN (under a tenant)
+  //
+  // Routes here are nested as /tenants/:id/users/:userId/... and power the
+  // extensive user detail page. They cover everything a super admin would need
+  // to know about a single user inside a tenant.
+  // ===========================================================================
+
+  // GET /tenants/:id/users/:userId — full profile with computed stats
+  app.get('/tenants/:id/users/:userId', async (req, reply) => {
+    if (!requireSuperAdmin(req, reply)) return;
+    const { id: tenantId, userId } = req.params;
+
+    return db.withSuperAdmin(async (c) => {
+      const userRes = await c.query(
+        `SELECT u.id, u.tenant_id, u.email, u.full_name, u.role, u.is_active,
+                u.last_login_at, u.created_at, u.updated_at,
+                t.business_name, t.subdomain
+         FROM users u JOIN tenants t ON t.tenant_id = u.tenant_id
+         WHERE u.id = $1 AND u.tenant_id = $2`,
+        [userId, tenantId]
+      );
+      if (!userRes.rows[0]) { reply.code(404); return { error: 'user not found' }; }
+      const user = userRes.rows[0];
+
+      // Stats vary by role. For staff: counts of bookings assigned + earnings.
+      // For business_admin: counts of audit actions taken + bookings created.
+      const [bookingStats, activityStats, commissionRules] = await Promise.all([
+        c.query(
+          `SELECT
+            COUNT(*)::int AS total,
+            COUNT(*) FILTER (WHERE status = 'completed')::int AS completed,
+            COUNT(*) FILTER (WHERE status = 'pending')::int   AS pending,
+            COUNT(*) FILTER (WHERE status = 'cancelled')::int AS cancelled,
+            COALESCE(SUM(quoted_price) FILTER (WHERE status = 'completed'), 0)::float AS revenue
+           FROM bookings WHERE tenant_id = $1 AND assigned_staff = $2`,
+          [tenantId, userId]
+        ),
+        c.query(
+          `SELECT COUNT(*)::int AS n,
+                  MIN(created_at) AS first_action,
+                  MAX(created_at) AS last_action
+           FROM audit_logs WHERE tenant_id = $1 AND actor_id = $2`,
+          [tenantId, userId]
+        ),
+        c.query(
+          `SELECT * FROM commission_structures
+           WHERE tenant_id = $1 AND is_active = true
+             AND applies_to IN ('staff', 'platform')`,
+          [tenantId]
+        ),
+      ]);
+
+      // Compute estimated earnings: for staff, apply the active staff-commission
+      // rule (if any) to their completed-booking revenue.
+      const completedRevenue = Number(bookingStats.rows[0].revenue);
+      const staffRule = commissionRules.rows.find((r) => r.applies_to === 'staff');
+      let earnedEstimate = 0;
+      if (staffRule) {
+        if (staffRule.rate_type === 'percent') earnedEstimate = completedRevenue * (Number(staffRule.rate_value) / 100);
+        else earnedEstimate = completedRevenue > 0 ? bookingStats.rows[0].completed * Number(staffRule.rate_value) : 0;
+      }
+
+      return {
+        user,
+        booking_stats: bookingStats.rows[0],
+        activity_stats: activityStats.rows[0],
+        commission_rule: staffRule || null,
+        earned_estimate: Math.round(earnedEstimate * 100) / 100,
+      };
+    });
+  });
+
+  // GET /tenants/:id/users/:userId/bookings — bookings assigned to this user
+  app.get('/tenants/:id/users/:userId/bookings', async (req, reply) => {
+    if (!requireSuperAdmin(req, reply)) return;
+    const { id: tenantId, userId } = req.params;
+    const status = req.query.status;
+
+    return db.withSuperAdmin(async (c) => {
+      const params = [tenantId, userId];
+      let where = 'b.tenant_id = $1 AND b.assigned_staff = $2';
+      if (status) { params.push(status); where += ` AND b.status = $${params.length}`; }
+      const { rows } = await c.query(
+        `SELECT b.id, b.scheduled_at, b.status, b.quoted_price, b.notes, b.created_at,
+                cu.full_name AS customer_name, cu.email AS customer_email,
+                s.title AS service_title
+         FROM bookings b
+         LEFT JOIN customers cu ON cu.id = b.customer_id
+         LEFT JOIN services  s  ON s.id  = b.service_id
+         WHERE ${where}
+         ORDER BY b.scheduled_at DESC
+         LIMIT 200`,
+        params
+      );
+      return { data: rows };
+    });
+  });
+
+  // GET /tenants/:id/users/:userId/earnings — payment / commission breakdown
+  app.get('/tenants/:id/users/:userId/earnings', async (req, reply) => {
+    if (!requireSuperAdmin(req, reply)) return;
+    const { id: tenantId, userId } = req.params;
+
+    return db.withSuperAdmin(async (c) => {
+      // Per-booking earnings: completed bookings assigned to this user.
+      const bookings = await c.query(
+        `SELECT b.id, b.scheduled_at, b.quoted_price, b.status,
+                s.title AS service_title,
+                cu.full_name AS customer_name
+         FROM bookings b
+         LEFT JOIN services  s  ON s.id  = b.service_id
+         LEFT JOIN customers cu ON cu.id = b.customer_id
+         WHERE b.tenant_id = $1 AND b.assigned_staff = $2 AND b.status = 'completed'
+         ORDER BY b.scheduled_at DESC
+         LIMIT 200`,
+        [tenantId, userId]
+      );
+
+      // Find the applicable commission rule for staff.
+      const ruleRes = await c.query(
+        `SELECT * FROM commission_structures
+         WHERE tenant_id = $1 AND applies_to = 'staff' AND is_active = true
+         LIMIT 1`,
+        [tenantId]
+      );
+      const rule = ruleRes.rows[0] || null;
+
+      // Apply the rule to each booking and sum.
+      const earnings = bookings.rows.map((b) => {
+        const price = Number(b.quoted_price || 0);
+        let amount = 0;
+        if (rule) {
+          if (rule.rate_type === 'percent') amount = price * (Number(rule.rate_value) / 100);
+          else amount = Number(rule.rate_value);
+        }
+        return { ...b, earned: Math.round(amount * 100) / 100 };
+      });
+
+      // Aggregate by month for the chart.
+      const byMonthMap = new Map();
+      earnings.forEach((e) => {
+        const ym = new Date(e.scheduled_at).toISOString().slice(0, 7);
+        byMonthMap.set(ym, (byMonthMap.get(ym) || 0) + e.earned);
+      });
+      const by_month = Array.from(byMonthMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([month, total]) => ({ month, total: Math.round(total * 100) / 100 }));
+
+      const totalEarned = earnings.reduce((s, e) => s + e.earned, 0);
+      const totalCustomerSpend = earnings.reduce((s, e) => s + Number(e.quoted_price || 0), 0);
+
+      return {
+        rule,
+        earnings,
+        by_month,
+        totals: {
+          jobs_completed: earnings.length,
+          total_earned: Math.round(totalEarned * 100) / 100,
+          customer_spend: Math.round(totalCustomerSpend * 100) / 100,
+          avg_per_job: earnings.length ? Math.round((totalEarned / earnings.length) * 100) / 100 : 0,
+        },
+      };
+    });
+  });
+
+  // GET /tenants/:id/users/:userId/activity — audit actions taken by this user
+  app.get('/tenants/:id/users/:userId/activity', async (req, reply) => {
+    if (!requireSuperAdmin(req, reply)) return;
+    const { id: tenantId, userId } = req.params;
+    const limit = Math.min(parseInt(req.query.limit || '100', 10), 500);
+
+    return db.withSuperAdmin(async (c) => {
+      const { rows } = await c.query(
+        `SELECT id, entity_type, entity_id, action, old_value, new_value, created_at
+         FROM audit_logs
+         WHERE tenant_id = $1 AND actor_id = $2
+         ORDER BY created_at DESC
+         LIMIT $3`,
+        [tenantId, userId, limit]
+      );
+      return { data: rows };
+    });
+  });
+
+  // PATCH /tenants/:id/users/:userId — toggle active state or role
+  app.patch('/tenants/:id/users/:userId', async (req, reply) => {
+    if (!requireSuperAdmin(req, reply)) return;
+    const { id: tenantId, userId } = req.params;
+    const { is_active, role } = req.body || {};
+
+    const updates = [];
+    const params = [];
+    if (typeof is_active === 'boolean') { params.push(is_active); updates.push(`is_active = $${params.length}`); }
+    if (role && ['business_admin', 'staff', 'viewer'].includes(role)) {
+      params.push(role); updates.push(`role = $${params.length}`);
+    }
+    if (!updates.length) { reply.code(400); return { error: 'no updates' }; }
+    params.push(userId, tenantId);
+
+    const { rows } = await db.withSuperAdmin((c) =>
+      c.query(
+        `UPDATE users SET ${updates.join(', ')}, updated_at = NOW()
+         WHERE id = $${params.length - 1} AND tenant_id = $${params.length}
+         RETURNING id, email, role, is_active`,
+        params
+      )
+    );
+    if (!rows[0]) { reply.code(404); return { error: 'user not found' }; }
+    return rows[0];
+  });
 };

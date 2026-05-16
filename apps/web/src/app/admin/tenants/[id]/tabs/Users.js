@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Badge, EmptyState, FilterBar, Table, THead, TBody, TR, TH, TD, Skeleton, StatusDot } from '@/components/admin/ui';
 import { Icon } from '@/components/marketing/icons';
 import { adminFetch } from '@/lib/admin-api';
@@ -66,9 +67,9 @@ export default function UsersTab({ tenantId }) {
 
       {loading ? (
         <Table>
-          <THead><TH>User</TH><TH>Role</TH><TH>Status</TH><TH>Last login</TH><TH>Joined</TH></THead>
+          <THead><TH>User</TH><TH>Role</TH><TH>Status</TH><TH>Last login</TH><TH>Joined</TH><TH /></THead>
           <TBody>{[1,2,3].map((i) => (
-            <TR key={i} hover={false}>{[1,2,3,4,5].map((c) => <TD key={c}><Skeleton height={14} className="w-24" /></TD>)}</TR>
+            <TR key={i} hover={false}>{[1,2,3,4,5,6].map((c) => <TD key={c}><Skeleton height={14} className="w-24" /></TD>)}</TR>
           ))}</TBody>
         </Table>
       ) : filtered.length === 0 ? (
@@ -85,6 +86,7 @@ export default function UsersTab({ tenantId }) {
             <TH>Status</TH>
             <TH>Last login</TH>
             <TH>Joined</TH>
+            <TH />
           </THead>
           <TBody>
             {filtered.map((u) => (
@@ -95,7 +97,7 @@ export default function UsersTab({ tenantId }) {
                       {(u.full_name || u.email).split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-medium truncate">{u.full_name || '—'}</div>
+                      <Link href={`/admin/tenants/${tenantId}/users/${u.id}`} className="font-medium truncate hover:text-blue-600 transition">{u.full_name || '—'}</Link>
                       <div className="text-xs text-dim truncate">{u.email}</div>
                     </div>
                   </div>
@@ -104,6 +106,9 @@ export default function UsersTab({ tenantId }) {
                 <TD><StatusDot color={u.is_active ? 'emerald' : 'gray'} label={u.is_active ? 'Active' : 'Disabled'} /></TD>
                 <TD className="text-xs text-muted mono-num">{u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'Never'}</TD>
                 <TD className="text-xs text-dim mono-num">{new Date(u.created_at).toLocaleDateString()}</TD>
+                <TD align="right">
+                  <Link href={`/admin/tenants/${tenantId}/users/${u.id}`} className="text-xs text-blue-600 hover:underline font-medium">View →</Link>
+                </TD>
               </TR>
             ))}
           </TBody>
